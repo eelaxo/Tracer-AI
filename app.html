@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>$Tracer AI – live tool</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EEE9DD; --paper-2:#F8F5EB; --ink:#1C1B18; --muted:#6C665B; --rule:rgba(28,27,24,.24);
+  --red:#D23B26; --mustard:#B9821A; --green:#1B7A57; --grid:rgba(28,27,24,.055); --tape:rgba(214,170,50,.42);
+  --serif:"Instrument Serif",Georgia,"Times New Roman",serif;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --hand:"Caveat","Segoe Print","Bradley Hand","Noteworthy",cursive;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#15140F; --paper-2:#1F1D16; --ink:#EDE7D6; --muted:#A39D8D; --rule:rgba(237,231,214,.26);
+    --red:#F0563C; --mustard:#E0A93A; --green:#3DBE8B; --grid:rgba(237,231,214,.055); --tape:rgba(224,169,58,.32);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#15140F; --paper-2:#1F1D16; --ink:#EDE7D6; --muted:#A39D8D; --rule:rgba(237,231,214,.26);
+  --red:#F0563C; --mustard:#E0A93A; --green:#3DBE8B; --grid:rgba(237,231,214,.055); --tape:rgba(224,169,58,.32);
+}
+[hidden]{display:none!important}
+::-webkit-scrollbar{width:11px;height:11px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--red);border:3px solid var(--paper);border-radius:7px}
+::-webkit-scrollbar-thumb:hover{background:var(--red)}
+html{scrollbar-color:var(--red) transparent;scrollbar-width:thin}
+*{box-sizing:border-box}
+body{margin:0;background-color:var(--paper);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:32px 32px;color:var(--ink);font:16px/1.55 var(--sans);-webkit-text-size-adjust:100%}
+a{color:inherit}
+.d{color:var(--red)}
+.mark{font-family:var(--serif);font-weight:400;letter-spacing:-.02em;white-space:nowrap}
+.mark em{font-family:var(--mono);font-style:normal;font-size:.24em;letter-spacing:.06em;border:1.5px solid currentColor;padding:.1em .4em;margin-left:.3em;vertical-align:1.6em;border-radius:2px}
+
+/* ---------- nav ---------- */
+.nav{display:flex;align-items:center;gap:26px;padding:12px 28px;border-bottom:1px solid var(--rule);background:var(--paper);position:sticky;top:0;z-index:5}
+.wm{font-size:27px;line-height:1;text-decoration:none}
+.links{display:flex;gap:6px}
+.links a{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent;padding:6px 8px}
+.links a:hover{color:var(--red)}
+.links a.on{color:var(--ink);border-bottom-color:var(--red)}
+.status{margin-left:auto;font:500 11.5px var(--mono);letter-spacing:.06em;color:var(--muted)}
+.status.ok::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:8px}
+.status.bad{color:var(--red)}
+
+.wrap{max-width:1240px;margin:0 auto;padding:0 28px 60px}
+.intro{padding:44px 0 24px}
+.kicker{font:500 12.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+h1{font:400 clamp(46px,7vw,86px)/.95 var(--serif);letter-spacing:-.02em;margin:0 0 14px}
+.lead{max-width:58ch;font-size:17.5px;margin:0}
+
+/* ---------- report form (a paper case file) ---------- */
+.file{position:relative;background:var(--paper-2);border:1px solid var(--rule);padding:24px 26px 18px;margin-top:14px;transform:rotate(-.25deg)}
+.file::before,.paper::before{content:"";position:absolute;top:-9px;left:50%;width:74px;height:17px;background:var(--tape);transform:translateX(-50%) rotate(-2deg)}
+.tabs{display:flex;gap:6px;margin-bottom:16px}
+.tab{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:none;border:0;border-bottom:2px solid transparent;padding:6px 8px;cursor:pointer}
+.tab:hover{color:var(--red)}
+.tab.on{color:var(--ink);border-bottom-color:var(--red)}
+.ncrp{display:flex;flex-wrap:wrap;gap:14px 16px;align-items:flex-end;margin-bottom:18px}
+.ncrp .f{flex:0 1 280px}
+.fine{font:400 11.5px var(--mono);color:var(--muted);flex-basis:100%}
+.fields{display:grid;grid-template-columns:1.15fr .8fr .85fr 2.6fr auto;gap:20px;align-items:end}
+@media (max-width:980px){.fields{grid-template-columns:1fr 1fr}.f.wide{grid-column:1/-1}.fields .btn{grid-column:1/-1}}
+.f{display:block;font:500 10.5px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.f input,.f select{display:block;width:100%;margin-top:6px;font:500 16px var(--sans);letter-spacing:0;text-transform:none;color:var(--ink);background:transparent;border:0;border-bottom:1.5px solid var(--ink);border-radius:0;padding:6px 0}
+.f input.mono{font:500 14px var(--mono)}
+.f select option{background:var(--paper-2);color:var(--ink)}
+.f input:focus,.f select:focus{outline:0;border-bottom-color:var(--red)}
+.btn{font:500 12.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;border:1.5px solid var(--ink);background:transparent;color:var(--ink);padding:11px 18px;cursor:pointer;transition:background .2s,color .2s;white-space:nowrap}
+.btn:hover{background:var(--red);border-color:var(--red);color:#fff}
+.btn.primary{background:var(--ink);color:var(--paper)}
+.btn.primary:hover{background:var(--red);border-color:var(--red);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.sm{padding:8px 14px;font-size:11.5px}
+.link{font:500 11.5px var(--mono);letter-spacing:.06em;background:none;border:0;border-bottom:1px dashed var(--muted);color:var(--muted);cursor:pointer;padding:0}
+.link:hover{color:var(--red);border-bottom-color:var(--red)}
+.run{font:500 12.5px var(--mono);letter-spacing:.04em;color:var(--muted);min-height:20px;margin-top:14px}
+.run b{color:var(--red);font-weight:500}
+.run.err{color:var(--red)}
+.recent{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:6px;font:400 11.5px var(--mono);color:var(--muted)}
+.chip{font:500 11.5px var(--mono);border:1px solid var(--rule);background:transparent;color:var(--ink);padding:4px 9px;cursor:pointer}
+.chip:hover{border-color:var(--red);color:var(--red)}
+
+/* ---------- result ---------- */
+#result{margin-top:52px;scroll-margin-top:76px}
+.case-head{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;border-bottom:1px solid var(--rule);padding-bottom:12px;margin-bottom:18px}
+.case-head h2{font:400 clamp(30px,4vw,46px)/1 var(--serif);margin:0}
+.case-head h2 span{display:block;font:500 12px var(--mono);letter-spacing:.14em;color:var(--red);margin-bottom:8px;text-transform:uppercase}
+.ctrl{display:flex;gap:16px;align-items:center}
+.chk{font:500 11.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:flex;gap:7px;align-items:center;cursor:pointer}
+.chk input{accent-color:var(--red)}
+.stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px 22px;margin-bottom:22px}
+@media (max-width:900px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat span{display:block;font:500 10.5px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.stat b{font:400 32px/1.05 var(--serif);font-variant-numeric:tabular-nums;font-weight:400}
+.gcard{border:1px solid var(--rule);background:var(--paper)}
+.stepper{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--rule)}
+.stepper span{flex:1 1 200px;padding:11px 16px;font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-right:1px solid var(--rule);border-bottom:3px solid transparent;margin-bottom:-1px}
+.stepper span:last-child{border-right:0}
+.stepper b{color:var(--red);margin-right:8px;font-weight:500}
+.stepper span.done{color:var(--ink)}
+.stepper span.on{color:var(--ink);border-bottom-color:var(--red);background:var(--paper-2)}
+.ginner{display:grid;grid-template-columns:minmax(0,1fr) 300px}
+@media (max-width:1000px){.ginner{grid-template-columns:minmax(0,1fr)}}
+.gwrap{overflow-x:auto;padding:8px 6px 4px}
+.gwrap svg{display:block;width:100%;min-width:700px;height:auto;overflow:visible}
+.insp{border-left:1px solid var(--rule);padding:18px 20px;background:var(--paper-2);min-height:300px}
+@media (max-width:1000px){.insp{border-left:0;border-top:1px solid var(--rule);min-height:0}}
+.ih{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.insp h3{font:italic 400 28px/1.05 var(--serif);margin:0 0 4px}
+.ia{font:400 11.5px var(--mono);color:var(--muted);word-break:break-all;margin-bottom:8px}
+.idesc{font-size:14px;margin:0 0 10px}
+.score{display:flex;align-items:baseline;gap:8px;margin:2px 0 4px}
+.score b{font:400 54px/1 var(--serif);font-variant-numeric:tabular-nums}
+.score span{font:400 12px var(--mono);color:var(--muted)}
+.why{list-style:none;margin:6px 0 0;padding:0}
+.why li{display:grid;grid-template-columns:minmax(0,1fr) 46px 34px;gap:8px;align-items:center;font-size:13px;padding:3px 0;line-height:1.25}
+.why .bar{height:6px;background:var(--rule)}
+.why .bar i{display:block;height:100%}
+.why .v{font:400 12px var(--mono);text-align:right;color:var(--muted)}
+.idle{color:var(--muted);font-size:15px;margin:0}
+.imeta{font:400 12px var(--mono);color:var(--muted);margin-top:12px;display:flex;gap:14px;flex-wrap:wrap}
+.legend{display:flex;flex-wrap:wrap;gap:5px 16px;padding:10px 18px 12px;border-top:1px solid var(--rule);font:400 11.5px var(--mono);color:var(--muted);align-items:center}
+.legend i{display:inline-block;vertical-align:-1px;margin-right:6px}
+.lg-h{width:11px;height:11px;border:2px solid var(--ink);border-radius:50%;background:var(--paper)}
+.lg-r{width:11px;height:11px;border-radius:50%;background:var(--red)}
+.lg-w{width:11px;height:11px;border-radius:50%;background:var(--ink)}
+.lg-d{width:10px;height:10px;background:var(--mustard);transform:rotate(45deg)}
+.lg-g{width:11px;height:11px;border-radius:50%;background:var(--green)}
+.lg-x{width:12px;height:12px;background:var(--green);clip-path:polygon(25% 3%,75% 3%,100% 50%,75% 97%,25% 97%,0 50%)}
+.lg-bar{width:90px;height:8px;background:linear-gradient(90deg,var(--green),var(--mustard),var(--red))}
+.legend .note{flex-basis:100%;font:400 12.5px var(--sans);color:var(--muted)}
+
+.two{display:grid;grid-template-columns:1fr 1.2fr;gap:34px;margin-top:38px}
+@media (max-width:900px){.two{grid-template-columns:1fr}}
+.paper{position:relative;background:var(--paper-2);border:1px solid var(--rule);padding:24px 26px 20px;transform:rotate(-.35deg)}
+.paper.r{transform:rotate(.3deg)}
+.ph{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between;gap:8px}
+.vn{font:400 clamp(38px,4.6vw,56px)/1 var(--serif);letter-spacing:-.01em}
+.vc{font:400 13px var(--mono);color:var(--muted);margin:8px 0 8px}
+.vc b{font:400 28px var(--serif);color:var(--green);margin-right:6px;font-weight:400}
+.vbar{height:6px;background:var(--rule);margin-bottom:14px}
+.vbar i{display:block;height:100%;background:var(--green)}
+.ev{margin:0 0 10px;padding-left:18px;font-size:14.5px}
+.ev li{margin:4px 0}
+.hw{font:400 12px var(--mono);color:var(--muted)}
+pre.fz{font:400 12.5px/1.65 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0 14px}
+.acts{display:flex;gap:10px}
+details.tbl{margin-top:36px;border-top:1px solid var(--rule)}
+details.tbl summary{cursor:pointer;font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;padding:14px 0;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--rule)}
+th{font:500 10.5px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+td.m{font:400 12px var(--mono)}
+.rb{display:inline-block;min-width:36px;text-align:center;font:500 12px var(--mono);color:#fff;padding:1px 7px}
+footer{max-width:1240px;margin:0 auto;padding:22px 28px 34px;font:400 12.5px var(--mono);color:var(--muted);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--rule)}
+
+/* ---------- graph ---------- */
+.colhead{fill:var(--muted);font:500 11px var(--mono);letter-spacing:.09em;text-transform:uppercase;text-anchor:middle;opacity:0;transition:opacity .4s}
+.colhead.on{opacity:1}
+.hr{stroke:var(--rule);stroke-width:1}
+.edge{fill:none;stroke:var(--ink);stroke-linecap:butt;stroke-opacity:.5;transition:stroke-dashoffset .6s ease,opacity .5s}
+.edge.dash{stroke:var(--mustard);stroke-opacity:.95;stroke-dasharray:7 6;opacity:0}
+.edge.dash.on{opacity:1}
+.flow{fill:none;stroke:var(--red);stroke-linecap:round;stroke-dasharray:1 12;opacity:0;transition:opacity .5s}
+.flow.on{opacity:1;animation:flow 1.6s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-26}}
+.elabel{fill:var(--muted);font:400 11px var(--mono);text-anchor:middle;paint-order:stroke;stroke:var(--paper);stroke-width:5px;stroke-linejoin:round;opacity:0;transition:opacity .5s}
+.elabel.sm{font-size:9.5px;fill:var(--mustard)}
+.elabel.on{opacity:1}
+.node{opacity:0;transition:opacity .35s;pointer-events:none}
+.node.on{opacity:1;pointer-events:auto;cursor:pointer}
+.node:focus-visible{outline:none}
+.node:focus-visible .halo{opacity:1}
+.node .shape{transform:scale(.2);transform-origin:0 0;transition:transform .45s cubic-bezier(.2,1.6,.4,1)}
+.node.on .shape{transform:scale(1)}
+.node .bs{stroke:var(--paper);stroke-width:3;paint-order:stroke;transition:fill .6s}
+.node .b-reported{fill:var(--red)}
+.node .b-burner{fill:var(--ink)}
+.node .b-mixer,.node .b-bridge{fill:var(--mustard)}
+.node .b-deposit,.node .b-hotwallet{fill:var(--green)}
+.node .b-victim{fill:var(--paper);stroke:var(--ink);stroke-width:2;paint-order:normal}
+.node .b-fiat{fill:var(--paper-2);stroke:var(--ink);stroke-width:1.5;paint-order:normal}
+.tag{fill:var(--ink);font:500 11.5px var(--mono);text-anchor:middle}
+.adr{fill:var(--muted);font:400 9.5px var(--mono);text-anchor:middle}
+.fiat-t{fill:var(--ink);font:500 11px var(--mono);text-anchor:middle}
+.rk{font:700 13px var(--mono);text-anchor:middle;opacity:0;transition:opacity .6s}
+.scored .rk{opacity:1}
+.halo{fill:none;stroke:var(--ink);stroke-width:1.6;stroke-dasharray:3 3;opacity:0}
+.node.sel .halo{opacity:1}
+.pulse,.ring{fill:none;stroke-width:2;opacity:0;transform-origin:0 0}
+.pulse{stroke:var(--red)}
+.ring{stroke:var(--green);stroke-width:2.5}
+.node.on .pulse{animation:pulse 2s ease-out infinite}
+.ring.on{animation:pulse 1.8s ease-out infinite}
+@keyframes pulse{0%{transform:scale(1);opacity:.9}100%{transform:scale(2.8);opacity:0}}
+.ink{fill:none;stroke:var(--red);stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;opacity:0;transition:stroke-dashoffset 1.1s ease}
+.ink.on{stroke-dashoffset:0;opacity:1}
+.hand{font:700 24px var(--hand);text-anchor:middle;fill:var(--red);opacity:0;transition:opacity .6s .5s}
+.hand.g{fill:var(--green)}
+.hand.on{opacity:1}
+.instant *{transition:none!important}
+@media (prefers-reduced-motion: reduce){.flow.on,.node.on .pulse,.ring.on{animation:none}}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a class="wm mark" href="/"><span class="d">$</span>Tracer<em>AI</em></a>
+  <div class="links"><a href="/">How it works</a><a href="/app" class="on">Live tool</a><a href="/about">About</a></div>
+  <span class="status" id="status">checking backend…</span>
+</nav>
+
+<main class="wrap">
+  <header class="intro">
+    <div class="kicker">Stratagem Crew &middot; Team ID 176962 &nbsp;/&nbsp; live tool</div>
+    <h1>Trace a wallet.</h1>
+    <p class="lead">File a report by hand, or pull one from NCRP. The backend follows the money, scores every wallet and names the exchange it lands in.</p>
+  </header>
+
+  <section class="file" aria-label="Report a wallet">
+    <div class="tabs">
+      <button type="button" class="tab on" id="tabManual">Type it in</button>
+      <button type="button" class="tab" id="tabNcrp">Pull from NCRP*</button>
+    </div>
+    <div class="ncrp" id="ncrpRow" hidden>
+      <label class="f">NCRP complaint ID<input id="ncrpId" placeholder="e.g. NCRP2026-0001" autocomplete="off"></label>
+      <button type="button" class="btn sm" id="ncrpPull">Pull complaint</button>
+      <span class="fine" id="ncrpNote">*Simulated lookup: there is no live NCRP connection. It fills the form below.</span>
+    </div>
+    <form id="form" class="fields" autocomplete="off">
+      <label class="f">Type of fraud
+        <select id="category"><option>Investment scam</option><option>Task-based fraud</option><option>Sextortion</option><option>Phishing</option><option>Ransomware</option><option>Romance scam</option></select>
+      </label>
+      <label class="f">Chain
+        <select id="chain"><option value="ETH">Ethereum</option><option value="TRX">TRON</option></select>
+      </label>
+      <label class="f">Amount lost (USDT)
+        <input id="amount" type="number" min="1" value="12000">
+      </label>
+      <label class="f wide">Suspect wallet address
+        <input id="wallet" class="mono" placeholder="0x… or T…" required spellcheck="false">
+      </label>
+      <button class="btn primary" id="submitBtn" type="submit">Trace it &rarr;</button>
+    </form>
+    <div class="run" id="run" aria-live="polite"></div>
+    <div class="recent" id="recent"><button type="button" class="link" id="sample">use a sample wallet</button></div>
+  </section>
+
+  <section id="result" hidden aria-label="Trace result">
+    <div class="case-head">
+      <h2 id="caseTitle"></h2>
+      <div class="ctrl">
+        <label class="chk"><input type="checkbox" id="heatToggle" checked> AI risk colours</label>
+        <button type="button" class="btn sm" id="replay">&#8635; Replay</button>
+      </div>
+    </div>
+    <div class="stats" id="stats"></div>
+
+    <div class="gcard">
+      <div class="stepper" id="stepper">
+        <span><b>01</b>Follow the money</span>
+        <span><b>02</b>AI scores every wallet</span>
+        <span><b>03</b>Name the exchange</span>
+      </div>
+      <div class="ginner">
+        <div class="gwrap"><svg id="g" viewBox="0 0 860 400" role="img" aria-label="Transaction graph from the victims, through the reported wallet and laundering hops, to the exchange"></svg></div>
+        <aside class="insp" id="insp"></aside>
+      </div>
+      <div class="legend">
+        <span><i class="lg-h"></i>victim</span>
+        <span><i class="lg-r"></i>reported wallet</span>
+        <span><i class="lg-w"></i>burner</span>
+        <span><i class="lg-d"></i>mixer / bridge</span>
+        <span><i class="lg-g"></i>exchange deposit</span>
+        <span><i class="lg-x"></i>exchange hot wallet</span>
+        <span><i class="lg-bar"></i>AI risk: low &rarr; high</span>
+        <div class="note">Risk means how much a wallet <em>behaves like</em> a launderer. Exchange wallets score low on purpose: looking like a regulated service is exactly how we recognise them.</div>
+      </div>
+    </div>
+
+    <div class="two">
+      <div class="paper" id="vasp"></div>
+      <div class="paper r" id="freeze"></div>
+    </div>
+
+    <details class="tbl">
+      <summary id="tblSum">All wallets and AI scores</summary>
+      <table><thead><tr><th>Wallet</th><th>Role</th><th>Risk</th><th>Strongest signal</th></tr></thead><tbody id="tbody"></tbody></table>
+    </details>
+  </section>
+</main>
+
+<footer><span>Prototype. Wallet graphs are generated from the address you enter, not read from a live blockchain. NCRP lookup and exchange names are simulated.</span><span>Stratagem Crew &middot; Team ID 176962</span></footer>
+
+<script>
+(() => {
+'use strict';
+const $ = (s) => document.querySelector(s);
+const NS = 'http://www.w3.org/2000/svg';
+const svg = $('#g');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const LEVEL = { victim: 0, reported: 1, burner: 2, mixer: 3, bridge: 3, deposit: 4, hotwallet: 5, fiat: 6 };
+const COLS = [[0, 'Victims'], [1, 'Reported'], [2, 'Burners'], [3, 'Mixer / bridge'], [4, 'Deposits'], [5, 'Exchange'], [6, 'Cash-out']];
+const TAG = { victim: 'victim', reported: 'reported', burner: 'burner', mixer: 'mixer', bridge: 'bridge', deposit: 'deposit', hotwallet: 'hot wallet', fiat: 'fiat' };
+const TITLE = { victim: 'Victim wallet', reported: 'Reported wallet', burner: 'Burner wallet', mixer: 'Mixer', bridge: 'Cross-chain bridge', deposit: 'Exchange deposit address', hotwallet: 'Exchange hot wallet', fiat: 'Cash-out' };
+const DESC = {
+  victim: 'Not scored. Its transfers are the evidence trail.',
+  reported: 'The wallet the victim reported. Money from several victims lands here first.',
+  burner: 'A throwaway wallet that forwards money within minutes to hide the trail.',
+  mixer: 'Pools coins from many users and pays them out again to break the link.',
+  bridge: 'Moves value to another blockchain, so the trail seems to restart.',
+  deposit: 'A fresh address the exchange gives a customer. It sweeps into the exchange hot wallet.',
+  hotwallet: 'The exchange main wallet. Many deposit addresses sweep into it. This is where a freeze request goes.',
+  fiat: 'Money leaves the chain here. The exchange holds the KYC and bank records.',
+};
+const FEAT = { inflow: 'Receives from many victims', speed: 'Forwards money within minutes', fanOut: 'Splits money across wallets', mixer: 'Touches a mixer', bridge: 'Uses a cross-chain bridge', fresh: 'Brand-new wallet', split: 'Odd split amounts', service: 'Behaves like an exchange deposit' };
+const RAD = { victim: 9, reported: 14, burner: 10, mixer: 17, bridge: 17, deposit: 10, hotwallet: 20, fiat: 28 };
+
+const fmt = (n) => Math.round(n).toLocaleString('en-US');
+const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const mk = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in (attrs || {})) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+
+/* heat colours are read from the CSS variables so light and dark both work */
+function rgb(h) { h = h.trim().replace('#', ''); return [0, 2, 4].map((i) => parseInt(h.substr(i, 2), 16)); }
+function heat(p) {
+  const cs = getComputedStyle(document.documentElement);
+  const S = [[0, rgb(cs.getPropertyValue('--green'))], [.5, rgb(cs.getPropertyValue('--mustard'))], [1, rgb(cs.getPropertyValue('--red'))]];
+  p = Math.max(0, Math.min(1, p));
+  for (let i = 1; i < 3; i++) if (p <= S[i][0]) {
+    const [p0, c0] = S[i - 1], [p1, c1] = S[i], u = (p - p0) / (p1 - p0);
+    return 'rgb(' + c0.map((c, j) => Math.round(c + (c1[j] - c) * u)).join(',') + ')';
+  }
+  return 'rgb(' + S[2][1].join(',') + ')';
+}
+
+let C = null, L = null, R = null, timers = [], phase = 0, heatOn = true, selId = null;
+
+/* ---------------------------------------------------------------- status + recent cases */
+fetch('/api/cases').then((r) => { if (!r.ok) throw 0; return r.json(); }).then((rows) => {
+  $('#status').textContent = 'backend connected'; $('#status').className = 'status ok'; drawRecent(rows);
+}).catch(() => { $('#status').textContent = 'backend not reachable'; $('#status').className = 'status bad'; });
+
+function loadRecent() { fetch('/api/cases').then((r) => r.json()).then(drawRecent).catch(() => {}); }
+function drawRecent(rows) {
+  const box = $('#recent'); box.innerHTML = '';
+  const sample = document.createElement('button'); sample.type = 'button'; sample.id = 'sample'; sample.className = 'link'; sample.textContent = 'use a sample wallet';
+  sample.onclick = () => { $('#wallet').value = '0x9f3a7c41b2d85e60aa19c3f7d2e48b05c21e6d74'; $('#chain').value = 'ETH'; };
+  box.appendChild(sample);
+  if (rows.length) { const l = document.createElement('span'); l.textContent = ' · recent cases:'; box.appendChild(l); }
+  rows.slice(0, 6).forEach((c) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip';
+    b.textContent = c.case_id.replace('NCRP-', '') + ' → ' + c.vasp;
+    b.onclick = async () => { const r = await fetch('/api/case/' + c.case_id); showCase(await r.json()); };
+    box.appendChild(b);
+  });
+}
+
+/* ---------------------------------------------------------------- form */
+$('#tabManual').onclick = () => { $('#tabManual').classList.add('on'); $('#tabNcrp').classList.remove('on'); $('#ncrpRow').hidden = true; };
+$('#tabNcrp').onclick = () => { $('#tabNcrp').classList.add('on'); $('#tabManual').classList.remove('on'); $('#ncrpRow').hidden = false; $('#ncrpId').focus(); };
+$('#ncrpPull').onclick = async () => {
+  const id = $('#ncrpId').value.trim(); if (!id) { $('#ncrpId').focus(); return; }
+  const d = await (await fetch('/api/ncrp-lookup/' + encodeURIComponent(id))).json();
+  $('#category').value = d.category; $('#chain').value = d.chain; $('#amount').value = d.amount; $('#wallet').value = d.wallet;
+  $('#ncrpNote').textContent = 'Pulled ' + d.complaint_id + ' · filed ' + (d.filed_days_ago ? d.filed_days_ago + ' days ago' : 'today') + ' · simulated NCRP record. Check the form, then trace it.';
+};
+$('#wallet').addEventListener('input', (ev) => {           // guess the chain from the address shape
+  const v = ev.target.value.trim();
+  if (/^0x[0-9a-fA-F]{6,}/.test(v)) $('#chain').value = 'ETH';
+  else if (/^T[1-9A-Za-z]{10,}/.test(v)) $('#chain').value = 'TRX';
+});
+$('#form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const btn = $('#submitBtn'), run = $('#run'); btn.disabled = true; run.className = 'run';
+  for (const s of ['indexing the chain', 'following every hop', 'scoring wallets', 'naming the exchange']) {
+    run.innerHTML = '▸ <b>' + s + '…</b>'; await new Promise((r) => setTimeout(r, reduce ? 0 : 260));
+  }
+  try {
+    const r = await fetch('/api/report', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      wallet: $('#wallet').value.trim(), chain: $('#chain').value, amount: parseFloat($('#amount').value) || 1, category: $('#category').value, source: 'manual' }) });
+    if (!r.ok) { const e = await r.json(); throw new Error(e.detail || 'Request failed'); }
+    showCase(await r.json()); loadRecent(); run.textContent = '';
+  } catch (err) { run.className = 'run err'; run.textContent = err.message; }
+  btn.disabled = false;
+});
+
+/* ---------------------------------------------------------------- show a case */
+function showCase(c) {
+  C = c; selId = null;
+  $('#result').hidden = false;                       // must be visible before we measure paths
+  $('#caseTitle').innerHTML = '<span>Case file</span>' + esc(c.case_id);
+  const s = c.summary;
+  $('#stats').innerHTML = [
+    ['Wallets found', s.wallets_found], ['Hops followed', s.hops], ['Chains', s.chains.join(' + ')],
+    ['Funds reported', fmt(s.funds_reported) + ' USDT'], ['Reached the exchange', fmt(s.funds_reached_exchange) + ' USDT'],
+  ].map(([k, v]) => '<div class="stat"><span>' + k + '</span><b>' + esc(v) + '</b></div>').join('');
+
+  const v = c.vasp, deps = c.nodes.filter((n) => n.type === 'deposit').length;
+  const ev = v.evidence || [deps + ' separate paths end in deposit addresses that sweep into one hot wallet'];
+  $('#vasp').innerHTML = '<div class="ph"><span>Exchange attribution</span><span>simulated</span></div>' +
+    '<div class="vn">' + esc(v.name) + '*</div>' +
+    '<div class="vc"><b>' + v.confidence + '%</b>confidence</div><div class="vbar"><i style="width:' + v.confidence + '%"></i></div>' +
+    '<ul class="ev">' + ev.map((t) => '<li>' + esc(t) + '</li>').join('') + '</ul>' +
+    '<div class="hw">hot wallet ' + esc(v.wallet) + '</div>';
+  $('#freeze').innerHTML = '<div class="ph"><span>Freeze request · draft</span><span>for investigators</span></div>' +
+    '<pre class="fz" id="fzText"></pre><div class="acts"><button class="btn sm" id="fzCopy" type="button">Copy</button><button class="btn sm" id="fzDl" type="button">Download .txt</button></div>';
+  $('#fzText').textContent = c.freeze_request;
+  $('#fzCopy').onclick = () => { navigator.clipboard.writeText(c.freeze_request); $('#fzCopy').textContent = 'Copied'; setTimeout(() => $('#fzCopy').textContent = 'Copy', 1200); };
+  $('#fzDl').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([c.freeze_request], { type: 'text/plain' })); a.download = c.case_id + '-freeze-request.txt'; a.click(); };
+
+  const scored = c.nodes.filter((n) => n.risk !== undefined);
+  $('#tblSum').textContent = 'All wallets and AI scores (' + scored.length + ')';
+  $('#tbody').innerHTML = scored.map((n) => {
+    const rs = n.reasons || n.top_reasons || [], top = rs[0] ? (FEAT[rs[0].feature] || rs[0].feature) : '–';
+    return '<tr><td class="m">' + esc(n.short) + '</td><td>' + esc(n.label) + '</td><td><span class="rb" style="background:' + heat(n.risk / 100) + '">' + n.risk + '</span></td><td>' + esc(top) + '</td></tr>';
+  }).join('');
+
+  build(c); play();
+  $('#result').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+}
+
+/* ---------------------------------------------------------------- layout */
+function layout(nodes, edges) {
+  const byId = {}; nodes.forEach((n) => byId[n.id] = n);
+  const cols = {}; nodes.forEach((n) => (cols[LEVEL[n.type]] = cols[LEVEL[n.type]] || []).push(n));
+  const colW = 122, padX = 64, top = 136, rowH = 84, midY = top + rowH, W = padX * 2 + colW * 6, H = top + rowH * 2 + 92;
+  for (let lv = 0; lv <= 6; lv++) {
+    const arr = cols[lv]; if (!arr) continue;
+    arr.forEach((n) => {                              // sit each node near the average height of its parents: fewer crossings
+      const ps = edges.filter((e) => e.to === n.id).map((e) => byId[e.from]).filter((p) => p.y !== undefined);
+      n._k = ps.length ? ps.reduce((a, p) => a + p.y, 0) / ps.length : 0;
+    });
+    arr.sort((a, b) => a._k - b._k);
+    arr.forEach((n, i) => { n.x = padX + colW * lv; n.y = midY + (i - (arr.length - 1) / 2) * rowH; });
+  }
+  return { byId, cols, W, H, colW, padX };
+}
+function loop(cx, cy, rx, ry) {                       // hand-drawn loop
+  let sd = 7; const rnd = () => (sd = (sd * 9301 + 49297) % 233280) / 233280;
+  const P = [], N = 14;
+  for (let i = 0; i < N; i++) { const a = -Math.PI / 2 + (i / N) * Math.PI * 2, j = 1 + (rnd() - .5) * .07; P.push([cx + Math.cos(a) * rx * j, cy + Math.sin(a) * ry * j]); }
+  const mid = (a, b) => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+  let d = 'M' + mid(P[0], P[1]);
+  for (let i = 1; i <= N; i++) { const p = P[i % N], q = P[(i + 1) % N]; d += ' Q' + p + ' ' + mid(p, q); }
+  return d;
+}
+
+/* ---------------------------------------------------------------- build svg */
+function build(c) {
+  L = layout(c.nodes, c.edges); const { byId, cols, W, H, colW, padX } = L;
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H); svg.innerHTML = '';
+  R = { nodes: {}, edges: [], heads: {} };
+  const gH = mk('g', {}, svg), gE = mk('g', {}, svg), gL = mk('g', {}, svg), gF = mk('g', {}, svg), gN = mk('g', {}, svg), gA = mk('g', { 'pointer-events': 'none' }, svg);
+
+  mk('line', { class: 'hr', x1: 24, y1: 46, x2: W - 24, y2: 46 }, gH);
+  COLS.forEach(([lv, t]) => { if (cols[lv]) { const h = mk('text', { class: 'colhead', x: padX + colW * lv, y: 30 }, gH); h.textContent = t; R.heads[lv] = h; } });
+
+  c.edges.forEach((e) => {
+    const a = byId[e.from], b = byId[e.to];
+    const x1 = a.x + RAD[a.type] + 2, x2 = b.x - RAD[b.type] - 2, xm = (x1 + x2) / 2;
+    const d = 'M' + x1 + ' ' + a.y + ' C' + xm + ' ' + a.y + ' ' + xm + ' ' + b.y + ' ' + x2 + ' ' + b.y;
+    const dash = a.type === 'mixer' || a.type === 'bridge';
+    const p = mk('path', { class: 'edge' + (dash ? ' dash' : ''), d }, gE), len = p.getTotalLength();
+    p.style.strokeWidth = (1.2 + Math.sqrt(e.amount) / 45).toFixed(2);
+    if (!dash) { p.style.strokeDasharray = len; p.style.strokeDashoffset = len; }
+    const f = mk('path', { class: 'flow', d }, gF); f.style.strokeWidth = 3.6;
+    const m = p.getPointAtLength(len / 2);
+    const lab = mk('text', { class: 'elabel', x: m.x, y: m.y - 7 }, gL); lab.textContent = fmt(e.amount);
+    let lab2 = null;
+    if (dash) { lab2 = mk('text', { class: 'elabel sm', x: m.x, y: m.y + 14 }, gL); lab2.textContent = a.type === 'bridge' ? 'cross-chain' : 'timing match'; }
+    R.edges.push({ e, p, f, lab, lab2, dash, lv: LEVEL[b.type] });
+  });
+
+  c.nodes.forEach((n) => {
+    const r = RAD[n.type];
+    const g = mk('g', { class: 'node', transform: 'translate(' + n.x + ' ' + n.y + ')', tabindex: 0, role: 'button', 'aria-label': TITLE[n.type] + ' ' + n.short }, gN);
+    const sh = mk('g', { class: 'shape' }, g); let body;
+    if (n.type === 'mixer' || n.type === 'bridge') body = mk('rect', { x: -13, y: -13, width: 26, height: 26, transform: 'rotate(45)' }, sh);
+    else if (n.type === 'hotwallet') body = mk('polygon', { points: [0, 1, 2, 3, 4, 5].map((i) => (Math.cos(Math.PI / 3 * i) * 20).toFixed(1) + ',' + (Math.sin(Math.PI / 3 * i) * 20).toFixed(1)).join(' ') }, sh);
+    else if (n.type === 'fiat') { body = mk('rect', { x: -26, y: -14, width: 52, height: 28, rx: 3 }, sh); }
+    else body = mk('circle', { r }, sh);
+    body.setAttribute('class', 'bs b-' + n.type);
+    if (n.type === 'fiat') { const t = mk('text', { class: 'fiat-t', y: 4 }, sh); t.textContent = 'FIAT'; }
+    if (n.type === 'reported') mk('circle', { class: 'pulse', r: 14 }, g);
+    const ring = n.type === 'hotwallet' ? mk('circle', { class: 'ring', r: 22 }, g) : null;
+    mk('circle', { class: 'halo', r: r + 9 }, g);
+    const t1 = mk('text', { class: 'tag', y: r + 17 }, g); t1.textContent = TAG[n.type];
+    const t2 = mk('text', { class: 'adr', y: r + 30 }, g); t2.textContent = n.short;
+    let rk = null;
+    if (n.risk !== undefined) { rk = mk('text', { class: 'rk', y: -(r + 9) }, g); rk.textContent = n.risk; rk.style.fill = heat(n.risk / 100); }
+    g.addEventListener('click', () => select(n.id));
+    g.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); select(n.id); } });
+    R.nodes[n.id] = { n, g, body, ring, rk };
+  });
+
+  /* handwritten finale: circle the exchange cluster */
+  const cl = c.nodes.filter((n) => n.type === 'deposit' || n.type === 'hotwallet');
+  const x0 = Math.min(...cl.map((n) => n.x)) - 34, x1 = Math.max(...cl.map((n) => n.x)) + 34;
+  const y0 = Math.min(...cl.map((n) => n.y)) - 40, y1 = Math.max(...cl.map((n) => n.y)) + 46;
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, rx = (x1 - x0) / 2 * 1.12, ry = (y1 - y0) / 2 * 1.14;
+  R.ink = mk('path', { class: 'ink', d: loop(cx, cy, rx, ry), pathLength: 1 }, gA);
+  R.n1 = mk('text', { class: 'hand', x: cx, y: cy - ry - 8 }, gA); R.n1.textContent = 'every path ends at one exchange';
+  R.n2 = mk('text', { class: 'hand g', x: cx, y: cy + ry + 24 }, gA); R.n2.textContent = c.vasp.name + '* · ' + c.vasp.confidence + '% match';
+}
+
+/* ---------------------------------------------------------------- timeline */
+function clear() { timers.forEach(clearTimeout); timers = []; }
+function setStep(i) { document.querySelectorAll('#stepper span').forEach((s, k) => { s.classList.toggle('done', k < i); s.classList.toggle('on', k === i); }); }
+function colors() {
+  Object.values(R.nodes).forEach(({ n, body }) => {
+    if (n.risk === undefined) return;
+    body.style.fill = (phase >= 1 && heatOn) ? heat(n.risk / 100) : '';
+  });
+}
+function reset() {
+  phase = 0; svg.classList.remove('scored');
+  Object.values(R.heads).forEach((h) => h.classList.remove('on'));
+  R.edges.forEach((x) => { x.p.classList.remove('on'); x.f.classList.remove('on'); x.lab.classList.remove('on'); if (x.lab2) x.lab2.classList.remove('on'); if (!x.dash) x.p.style.strokeDashoffset = x.p.getTotalLength(); });
+  Object.values(R.nodes).forEach((o) => { o.g.classList.remove('on', 'sel'); o.body.style.fill = ''; if (o.ring) o.ring.classList.remove('on'); });
+  R.ink.classList.remove('on'); R.n1.classList.remove('on'); R.n2.classList.remove('on');
+}
+function play() {
+  clear(); reset(); selId = null; renderInsp(null); setStep(0);
+  svg.classList.toggle('instant', reduce);
+  const at = (ms, fn) => { if (reduce) fn(); else timers.push(setTimeout(fn, ms)); };
+  for (let lv = 0; lv <= 6; lv++) {
+    at(lv * 380, () => {
+      if (R.heads[lv]) R.heads[lv].classList.add('on');
+      R.edges.filter((x) => x.lv === lv).forEach((x) => { if (x.dash) x.p.classList.add('on'); else x.p.style.strokeDashoffset = 0; });
+    });
+    at(lv * 380 + 250, () => Object.values(R.nodes).filter((o) => LEVEL[o.n.type] === lv).forEach((o) => o.g.classList.add('on')));
+    at(lv * 380 + 700, () => R.edges.filter((x) => x.lv === lv).forEach((x) => { x.lab.classList.add('on'); if (x.lab2) x.lab2.classList.add('on'); }));
+  }
+  at(3500, () => {                                     // step 2: AI scoring
+    phase = 1; setStep(1); svg.classList.add('scored'); colors();
+    R.edges.forEach((x) => x.f.classList.add('on'));
+    const rep = C.nodes.find((n) => n.type === 'reported'); if (rep) select(rep.id);
+  });
+  at(6000, () => {                                     // step 3: name the exchange
+    phase = 2; setStep(2); R.ink.classList.add('on'); R.n1.classList.add('on'); R.n2.classList.add('on');
+    const hot = C.nodes.find((n) => n.type === 'hotwallet');
+    if (hot) { R.nodes[hot.id].ring.classList.add('on'); select(hot.id); }
+  });
+}
+$('#replay').onclick = () => { if (C) play(); };
+$('#heatToggle').onchange = (ev) => { heatOn = ev.target.checked; if (R) colors(); };
+
+/* ---------------------------------------------------------------- inspector */
+function select(id) {
+  selId = id;
+  Object.values(R.nodes).forEach((o) => o.g.classList.toggle('sel', o.n.id === id));
+  renderInsp(id);
+}
+function renderInsp(id) {
+  const box = $('#insp');
+  if (!id) { box.innerHTML = '<div class="ih">Wallet inspector</div><p class="idle">Click any wallet in the graph to see what it is and why the AI scored it that way.</p>'; return; }
+  const n = R.nodes[id].n;
+  const inA = C.edges.filter((e) => e.to === id).reduce((s, e) => s + e.amount, 0), outA = C.edges.filter((e) => e.from === id).reduce((s, e) => s + e.amount, 0);
+  let h = '<div class="ih">Wallet inspector</div><h3>' + esc(TITLE[n.type]) + '</h3><div class="ia">' + esc(n.address === 'fiat' ? 'off-chain' : n.address) + '</div><p class="idesc">' + esc(DESC[n.type]) + '</p>';
+  if (n.risk !== undefined) {
+    const rs = (n.reasons || n.top_reasons || []).slice().sort((a, b) => Math.abs(b.contribution) - Math.abs(a.contribution)).slice(0, 6);
+    h += '<div class="score"><b style="color:' + heat(n.risk / 100) + '">' + n.risk + '</b><span>/ 100 laundering risk</span></div><ul class="why">' +
+      rs.map((r) => '<li><span>' + esc(FEAT[r.feature] || r.feature) + '</span><span class="bar"><i style="width:' + Math.min(100, Math.abs(r.contribution) / 2.6 * 100).toFixed(0) + '%;background:' + (r.contribution >= 0 ? 'var(--red)' : 'var(--green)') + '"></i></span><span class="v">' + (r.contribution >= 0 ? '+' : '') + r.contribution.toFixed(1) + '</span></li>').join('') + '</ul>';
+  }
+  h += '<div class="imeta">' + (inA ? '<span>in ' + fmt(inA) + '</span>' : '') + (outA ? '<span>out ' + fmt(outA) + ' USDT</span>' : '') + '</div>';
+  box.innerHTML = h;
+}
+renderInsp(null);
+})();
+</script>
+</body>
+</html>

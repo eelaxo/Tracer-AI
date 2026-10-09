@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>$Tracer AI – follow the stolen money</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --paper:#EEE9DD; --paper-2:#F8F5EB; --ink:#1C1B18; --muted:#6C665B; --rule:rgba(28,27,24,.24);
+  --red:#D23B26; --mustard:#B9821A; --green:#1B7A57; --grid:rgba(28,27,24,.055); --tape:rgba(214,170,50,.42);
+  --serif:"Instrument Serif",Georgia,"Times New Roman",serif;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --hand:"Caveat","Segoe Print","Bradley Hand","Noteworthy",cursive;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#15140F; --paper-2:#1F1D16; --ink:#EDE7D6; --muted:#A39D8D; --rule:rgba(237,231,214,.26);
+    --red:#F0563C; --mustard:#E0A93A; --green:#3DBE8B; --grid:rgba(237,231,214,.055); --tape:rgba(224,169,58,.32);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#15140F; --paper-2:#1F1D16; --ink:#EDE7D6; --muted:#A39D8D; --rule:rgba(237,231,214,.26);
+  --red:#F0563C; --mustard:#E0A93A; --green:#3DBE8B; --grid:rgba(237,231,214,.055); --tape:rgba(224,169,58,.32);
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);scroll-behavior:auto}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 var(--sans);-webkit-text-size-adjust:100%}
+a{color:inherit}
+.d{color:var(--red)}
+.mark{font-family:var(--serif);font-weight:400;letter-spacing:-.02em;white-space:nowrap}
+.mark em{font-family:var(--mono);font-style:normal;font-size:.24em;letter-spacing:.06em;border:1.5px solid currentColor;padding:.1em .4em;margin-left:.3em;vertical-align:1.6em;border-radius:2px}
+.mono{font-family:var(--mono)}
+
+/* ---------- hero ---------- */
+.hero{min-height:100vh;min-height:100svh;display:flex;align-items:center;padding:56px 7vw;background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:32px 32px;position:relative}
+.hero-in{max-width:1000px}
+.kicker{font:500 12.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:22px}
+.hero h1{font-size:clamp(64px,13vw,168px);line-height:.92;margin:0 0 22px}
+.tagline{font:italic 400 clamp(24px,3.4vw,40px)/1.15 var(--serif);margin:0 0 30px}
+.tagline .tsep{color:var(--muted);font-style:normal;margin:0 .12em}
+.prob{font-size:clamp(16px,1.6vw,19px);max-width:56ch;margin:0 0 34px;color:var(--ink)}
+.prob b{background:linear-gradient(transparent 60%,rgba(210,59,38,.28) 60%);font-weight:600}
+.go{display:inline-flex;gap:14px;align-items:center;font:500 13px var(--mono);letter-spacing:.1em;text-transform:uppercase;text-decoration:none;border:1.5px solid var(--ink);padding:13px 20px;transition:background .2s,color .2s}
+.go:hover{background:var(--red);border-color:var(--red);color:#fff}
+.scrib{position:absolute;right:8vw;bottom:9vh;width:120px;height:150px;color:var(--red);opacity:.9}
+@media (max-width:700px){.scrib{display:none}}
+
+/* ---------- story ---------- */
+#story{position:relative;height:640vh}
+.stage{position:sticky;top:env(safe-area-inset-top,0px);height:calc(100vh - env(safe-area-inset-top,0px));height:calc(100svh - env(safe-area-inset-top,0px));display:flex;flex-direction:column;background-color:var(--paper);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:32px 32px;overflow:hidden}
+.nav{display:flex;align-items:center;gap:22px;padding:12px 28px;border-bottom:1px solid var(--rule);position:relative;background:var(--paper)}
+.wm{font-size:27px;line-height:1}
+.steps{display:flex;gap:6px;margin-left:auto}
+.stp{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:none;border:0;border-bottom:2px solid transparent;padding:6px 8px;cursor:pointer}
+.stp:hover{color:var(--red)}
+.stp.on{color:var(--ink);border-bottom-color:var(--red)}
+.stp.done{color:var(--ink)}
+.auto{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;background:var(--ink);color:var(--paper);border:0;padding:8px 14px;cursor:pointer}
+.auto:hover{background:var(--red);color:#fff}
+.prog{position:absolute;left:0;right:0;bottom:-1px;height:2px;background:transparent}
+.prog i{display:block;height:2px;width:0;background:var(--red)}
+.body{flex:1;min-height:0;display:grid;grid-template-columns:330px minmax(0,1fr);gap:26px;padding:20px 28px 16px}
+.cap{display:flex;flex-direction:column;justify-content:center;min-height:0;padding-bottom:30px}
+.num{font:500 13px var(--mono);letter-spacing:.14em;color:var(--red);margin-bottom:10px}
+.cap h2{font:400 clamp(32px,3.6vw,46px)/1.02 var(--serif);letter-spacing:-.01em;margin:0 0 16px}
+.cap p{font-size:17px;margin:0;color:var(--ink);max-width:34ch}
+.swap{animation:swap .5s ease}
+@keyframes swap{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.hint{font:500 24px var(--hand);color:var(--red);margin-top:26px;transition:opacity .4s}
+.viz{display:flex;flex-direction:column;min-width:0;min-height:0}
+.svgwrap{position:relative;flex:1;min-height:170px}
+.svgwrap svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.dock{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;min-height:172px;padding-top:12px;border-top:1px solid var(--rule);align-items:start}
+.board .bh{display:flex;justify-content:space-between;gap:10px;font:500 11.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.board .bh b{font-weight:500;color:var(--ink);letter-spacing:.04em;text-transform:none}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px}
+.stat span{display:block;font:500 10.5px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.stat b{font:400 30px/1.05 var(--serif);font-variant-numeric:tabular-nums}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:8px;font:400 11.5px var(--mono);color:var(--muted);align-items:center}
+.legend i{display:inline-block;vertical-align:-1px;margin-right:5px}
+.lg-h{width:11px;height:11px;border:2px solid var(--ink);border-radius:50%;background:var(--paper)}
+.lg-r{width:11px;height:11px;border-radius:50%;background:var(--red)}
+.lg-w{width:11px;height:11px;border-radius:50%;background:var(--ink)}
+.lg-d{width:10px;height:10px;background:var(--mustard);transform:rotate(45deg)}
+.lg-bar{width:90px;height:8px;background:linear-gradient(90deg,var(--green),var(--mustard),var(--red))}
+
+/* paper cards */
+.card,.complaint{background:var(--paper-2);border:1px solid var(--rule);position:relative;transform:rotate(-.5deg)}
+.card::before,.complaint::before{content:"";position:absolute;top:-9px;left:50%;width:74px;height:17px;background:var(--tape);transform:translateX(-50%) rotate(-2deg)}
+.card{padding:16px 18px 12px;min-height:150px;opacity:0;transition:opacity .35s}
+.card.on{opacity:1}
+.ch span:last-child{text-transform:none}
+.ch{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.score{display:flex;align-items:baseline;gap:8px;margin:2px 0 4px}
+.score b{font:400 46px/1 var(--serif);font-variant-numeric:tabular-nums}
+.score span{font:400 12px var(--mono);color:var(--muted)}
+.score em{font:italic 400 20px var(--serif);margin-left:auto}
+.why{list-style:none;margin:6px 0 0;padding:0}
+.why li{display:grid;grid-template-columns:minmax(0,1fr) 64px 34px;gap:10px;align-items:center;font-size:13.5px;padding:2px 0}
+.why .bar{height:6px;background:var(--rule)}
+.why .bar i{display:block;height:100%}
+.why .v{font:400 12px var(--mono);text-align:right;color:var(--muted)}
+.unpin{font:500 11px var(--mono);letter-spacing:.06em;background:none;border:1px solid var(--rule);color:var(--muted);padding:3px 8px;margin-top:8px;cursor:pointer}
+.fr{margin:6px 0 0;display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:13.5px}
+.fr dt{font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding-top:2px}
+.fr dd{margin:0;font-weight:500;opacity:0;transform:translateY(3px);transition:opacity .4s,transform .4s}
+.fr dd.on{opacity:1;transform:none}
+.fr dd b{color:var(--green)}
+.freeze-t{font:italic 400 24px var(--serif);margin:4px 0 2px}
+
+/* complaint form */
+.complaint{position:absolute;left:50%;top:50%;width:min(380px,90%);padding:20px 22px 18px;display:none;z-index:3;box-shadow:0 14px 40px rgba(0,0,0,.18)}
+.cf-h{font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:14px}
+.cf-t{font:italic 400 26px var(--serif);margin:0 0 10px}
+.cf-r{display:grid;grid-template-columns:96px 1fr;gap:10px;align-items:end;padding:5px 0;border-bottom:1px dashed var(--rule);font-size:14px}
+.cf-r span{font:500 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.cf-r div{font-weight:500;min-height:21px}
+.cf-r .m{font:500 12px var(--mono);word-break:break-all;line-height:1.4}
+.caret{display:inline-block;width:1px;height:13px;background:var(--ink);vertical-align:-2px;margin-left:1px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.stamp{position:absolute;right:16px;bottom:16px;font:700 22px var(--mono);letter-spacing:.14em;color:var(--red);border:3px solid var(--red);padding:3px 12px;transform:rotate(-9deg) scale(1.8);opacity:0;transition:opacity .15s,transform .25s cubic-bezier(.2,1.6,.4,1)}
+.stamp.on{opacity:.92;transform:rotate(-9deg) scale(1)}
+
+/* svg styling */
+.edge{fill:none;stroke:var(--ink);stroke-linecap:round;stroke-opacity:.55}
+.edge.dash{stroke:var(--mustard);stroke-opacity:.95}
+.flow{fill:none;stroke:var(--red);stroke-linecap:round;stroke-dasharray:1 12;opacity:0}
+.flow.on{opacity:1}
+.elabel{fill:var(--muted);font:400 12px var(--mono);text-anchor:middle;paint-order:stroke;stroke:var(--paper);stroke-width:5px;stroke-linejoin:round;opacity:0;transition:opacity .5s}
+.elabel.on{opacity:1}
+.node{opacity:0;transition:opacity .4s;pointer-events:none}
+.node.on{opacity:1;pointer-events:auto;cursor:pointer}
+.node .shape{transform:scale(.2);transform-origin:0 0;transition:transform .45s cubic-bezier(.2,1.6,.4,1)}
+.node.on .shape{transform:scale(1)}
+.node .body-s{stroke:var(--paper);stroke-width:3;paint-order:stroke}
+.node .tag{fill:var(--ink);font:500 12.5px var(--mono);text-anchor:middle}
+.node .halo{fill:none;stroke:var(--ink);stroke-width:1.6;stroke-dasharray:3 3;opacity:0;transition:opacity .2s}
+.node.sel .halo{opacity:1}
+.node .pulse{fill:none;stroke:var(--red);stroke-width:2;opacity:0;transform-origin:0 0}
+.node.on .pulse{animation:pulse 2s ease-out infinite}
+@keyframes pulse{0%{transform:scale(1);opacity:.9}100%{transform:scale(3);opacity:0}}
+.note text{fill:var(--red);font:700 23px var(--hand);text-anchor:middle}
+.note.green text{fill:var(--green)}
+.note{opacity:0;transition:opacity .5s}
+.note.on{opacity:1}
+.arrow{fill:none;stroke:var(--red);stroke-width:2.2;stroke-linecap:round}
+.note.green .arrow{stroke:var(--green)}
+.ink{fill:none;stroke:var(--red);stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+.ink.g{stroke:var(--green)}
+
+/* outro */
+.outro{padding:12vh 7vw 8vh;background:var(--paper);border-top:1px solid var(--rule)}
+.outro h2{font:400 clamp(34px,5vw,60px)/1.05 var(--serif);margin:0 0 34px;max-width:16ch}
+.outro h2 i{color:var(--red)}
+.points{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:34px;max-width:1080px;margin-bottom:56px}
+.points div{border-top:2px solid var(--ink);padding-top:12px}
+.points b{display:block;font:500 12px var(--mono);letter-spacing:.12em;color:var(--red);margin-bottom:6px}
+.points p{margin:0;font-size:16px}
+.points h3{font:400 24px/1.1 var(--serif);margin:0 0 6px}
+.formula{max-width:1080px;border:1px solid var(--rule);background:var(--paper-2);padding:20px 22px}
+.formula h4{font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.formula code{display:block;font:400 14px/1.7 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
+.formula p{margin:10px 0 0;font-size:14px;color:var(--muted);max-width:76ch}
+.pipe{display:flex;flex-wrap:wrap;gap:8px 0;margin:0 0 40px;font:500 12px var(--mono);letter-spacing:.06em;text-transform:uppercase}
+.pipe span{padding:6px 12px;border:1px solid var(--ink)}
+.pipe span+span{margin-left:-1px}
+footer{padding:22px 7vw 34px;font:400 12.5px var(--mono);color:var(--muted);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--rule)}
+
+@media (max-width:820px){
+  .nav{padding:10px 14px;gap:10px}
+  .wm{font-size:22px}
+  .stp{padding:6px 5px;font-size:11px}
+  .stp span{display:none}
+  .body{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr);gap:8px;padding:12px 14px 10px}
+  .cap{padding-bottom:0}
+  .cap h2{font-size:26px;margin-bottom:6px}
+  .cap p{font-size:14px;max-width:none;line-height:1.4}
+  .num{margin-bottom:4px}
+  .hint{display:none}
+  .dock{grid-template-columns:1fr;min-height:0;gap:6px}
+  .board{display:none}
+  .card{min-height:0;padding:12px 14px 8px}
+  .points{grid-template-columns:1fr}
+  .auto{padding:7px 9px}
+}
+.toollink{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;text-decoration:none;border:1.5px solid var(--ink);padding:7px 12px;margin-left:8px;color:var(--ink);white-space:nowrap}
+.toollink:hover{background:var(--red);border-color:var(--red);color:#fff}
+.topnav{display:flex;align-items:center;gap:26px;padding:12px 7vw;border-bottom:1px solid var(--rule)}
+.topnav .wm{font-size:23px;text-decoration:none}
+.tlinks{display:flex;gap:6px}
+.tlinks a{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent;padding:6px 8px}
+.tlinks a:hover{color:var(--red)}
+.tlinks a.on{color:var(--ink);border-bottom-color:var(--red)}
+@media (max-width:700px){.topnav{padding:10px 5vw;gap:14px}.tlinks{gap:2px}}
+::-webkit-scrollbar{width:11px;height:11px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--red);border:3px solid var(--paper);border-radius:7px}
+::-webkit-scrollbar-thumb:hover{background:var(--red)}
+html{scrollbar-color:var(--red) transparent;scrollbar-width:thin}
+@media (prefers-reduced-motion: reduce){
+  .node .shape,.node,.elabel,.note,.card,.swap,.fr dd,.stamp{transition:none;animation:none}
+  .node.on .pulse,.caret{animation:none}
+}
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a class="wm mark" href="/"><span class="d">$</span>Tracer<em>AI</em></a>
+  <div class="tlinks"><a href="/" class="on">How it works</a><a href="/app">Live tool</a><a href="/about">About</a></div>
+</nav>
+<header class="hero" id="top">
+  <div class="hero-in">
+    <div class="kicker">Stratagem Crew &nbsp;/&nbsp; a case, told in four scrolls</div>
+    <h1 class="mark"><span class="d">$</span>Tracer<em>AI</em></h1>
+    <p class="tagline"><span class="d">$</span>Trace <span class="tsep">&middot;</span> Analyse <span class="tsep">&middot;</span> Identify</p>
+    <p class="prob">A scam victim reports one wallet address. By then the money is already moving through burner wallets, mixers and bridges. Investigators need a single answer, fast: <b>which exchange ended up with it?</b></p>
+    <a class="go" href="#story" id="goBtn">Follow one case <span>&darr;</span></a>
+    <a class="go" href="/app" style="margin-left:12px">Open the live tool <span>&rarr;</span></a>
+  </div>
+  <svg class="scrib" viewBox="0 0 120 150" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8c30 6 70 4 86 30 14 24-10 42-40 40-30-2-44 22-14 40 14 8 30 10 42 24"/><path d="M84 122l-6 22 22-8"/></svg>
+</header>
+
+<section id="story" aria-label="Scroll-driven demo">
+  <div class="stage" id="stage">
+    <div class="nav">
+      <div class="wm mark"><span class="d">$</span>Tracer<em>AI</em></div>
+      <nav class="steps" id="steps" aria-label="Story steps"></nav>
+      <button class="auto" id="auto">Auto-play</button>
+      <div class="prog"><i id="prog"></i></div>
+    </div>
+    <div class="body">
+      <aside class="cap">
+        <div class="num" id="capNum">01 / 04</div>
+        <h2 id="capTitle"></h2>
+        <p id="capText"></p>
+        <div class="hint" id="hint">keep scrolling &darr;</div>
+      </aside>
+      <div class="viz">
+        <div class="svgwrap" id="svgwrap">
+          <svg id="g" viewBox="0 60 960 450" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Transaction graph: stolen funds split into three paths and all end at the same exchange"></svg>
+          <div class="complaint" id="complaint" aria-hidden="true">
+            <div class="cf-h"><span>NCRP · case file</span><span>simulated</span></div>
+            <div class="cf-t">Cybercrime report</div>
+            <div class="cf-r"><span>Case no.</span><div>NCRP-DEMO-0001</div></div>
+            <div class="cf-r"><span>Type</span><div>Investment scam</div></div>
+            <div class="cf-r"><span>Amount lost</span><div>12,000 USDT</div></div>
+            <div class="cf-r"><span>Suspect wallet</span><div class="m"><b id="fAddr"></b><i class="caret"></i></div></div>
+            <div class="stamp" id="stamp">Received</div>
+          </div>
+        </div>
+        <div class="dock">
+          <div class="board">
+            <div class="bh"><span>Case board</span><b id="status">waiting for a report</b></div>
+            <div class="stats">
+              <div class="stat"><span>Wallets found</span><b id="sWallets">–</b></div>
+              <div class="stat"><span>Hops followed</span><b id="sHops">–</b></div>
+              <div class="stat"><span>Chains</span><b id="sChains">–</b></div>
+              <div class="stat"><span>Funds followed</span><b id="sFunds">–</b></div>
+            </div>
+            <div class="legend" id="legend"></div>
+          </div>
+          <div class="card" id="card"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="outro" id="outro">
+  <h2>Why <i>$</i>Tracer AI is different</h2>
+  <div class="points">
+    <div><b>01</b><h3>One input</h3><p>Only the reported wallet is needed. Indexing, tracing and attribution run on their own.</p></div>
+    <div><b>02</b><h3>Sees through the tricks</h3><p>Burner wallets, mixers, bridges and chain-hopping are followed and flagged, not lost.</p></div>
+    <div><b>03</b><h3>Explains itself</h3><p>Every risk score comes with plain reasons, so it can stand up as evidence.</p></div>
+  </div>
+  <div class="pipe"><span>Report</span><span>Index</span><span>Trace</span><span>Score</span><span>Attribute</span><span>Freeze request</span></div>
+  <div class="formula">
+    <h4>The AI in this prototype</h4>
+    <code>risk = sigmoid( −2.2 + 2.2·victim_inflow + 1.6·speed + 1.2·fan_out + 2.0·mixer
+                + 1.0·bridge + 1.1·new_wallet + 0.8·odd_splits − 2.5·exchange_pattern )</code>
+    <p>Weights are set by hand here so every step can be explained. In production the same signals train a model (XGBoost, then a graph neural network) on labelled cases, and deposit addresses that sweep into one hot wallet are clustered to name the exchange.</p>
+  </div>
+  <p style="margin:38px 0 0"><a class="go" href="/app">Try it on your own wallet <span>&rarr;</span></a></p>
+</section>
+<footer><span>Simulated data. Addresses, amounts and "ExampleX Exchange" are fictional.</span><span>Stratagem Crew &middot; Team ID 176962</span></footer>
+
+<script>
+(() => {
+'use strict';
+
+/* =================================================================
+ *  PROTOTYPE SCORING (transparent weighted logistic)
+ * ================================================================= */
+const FEATS = [
+  { k: 'inflow',  label: 'Receives from many victims',       w: 2.2 },
+  { k: 'speed',   label: 'Forwards money within minutes',    w: 1.6 },
+  { k: 'fanOut',  label: 'Splits money across wallets',      w: 1.2 },
+  { k: 'mixer',   label: 'Touches a mixer',                  w: 2.0 },
+  { k: 'bridge',  label: 'Uses a cross-chain bridge',        w: 1.0 },
+  { k: 'fresh',   label: 'Brand-new wallet',                 w: 1.1 },
+  { k: 'split',   label: 'Odd split amounts',                w: 0.8 },
+  { k: 'service', label: 'Behaves like an exchange deposit', w: -2.5 },
+];
+const BIAS = -2.2;
+function score(f) {
+  let z = BIAS;
+  const parts = FEATS.map(F => { const v = f[F.k] || 0, c = F.w * v; z += c; return { label: F.label, v, c }; });
+  return { p: 1 / (1 + Math.exp(-z)), parts };
+}
+
+/* =================================================================
+ *  STORY DATA (simulated). t is "story time" in ms, driven by scroll.
+ * ================================================================= */
+const END = 40000, FLOW_START = 15000, AI_START = 24000, FREEZE_START = 33000;
+const B = [0, 6000, 24000, 33000, 40000];          // step boundaries in t
+const CUM = [0, .18, .56, .80, 1];                   // share of scroll for each step
+const STEPS = [
+  { name: 'Report', title: 'A victim reports a wallet',
+    text: 'The complaint reaches us through NCRP / SAHYOG. $Tracer AI reads the wallet address by itself, so no analyst has to copy anything.' },
+  { name: 'Follow', title: 'Follow the money',
+    text: 'We index the blockchain and follow every transfer, hop by hop. Mixers, bridges and burner wallets do not break the trail. They get flagged.' },
+  { name: 'Score', title: 'AI scores every wallet',
+    text: 'Simple, explainable signals give each wallet a risk score. Red means laundering behaviour. Green means it behaves like a regulated exchange.' },
+  { name: 'Freeze', title: 'Name the exchange, freeze it',
+    text: 'All three paths end in deposit addresses that sweep into one hot wallet. That is what an exchange looks like. We name it and draft the freeze request.' },
+];
+const F = (o) => Object.assign({ inflow: 0, speed: 0, fanOut: 0, mixer: 0, bridge: 0, fresh: 0, split: 0, service: 0 }, o);
+const NODES = [
+  { id: 'V1', type: 'victim', x: 70,  y: 160, at: 5400,  tag: 'victim', addr: '0x41c2…8d07' },
+  { id: 'V2', type: 'victim', x: 70,  y: 270, at: 6900,  tag: 'victim', addr: '0x77ab…13e0' },
+  { id: 'V3', type: 'victim', x: 70,  y: 380, at: 7300,  tag: 'victim', addr: '0xc08d…f5a2' },
+  { id: 'R',  type: 'reported', x: 200, y: 270, at: 5200, tag: 'reported wallet', addr: '0x9f3a…6d74',
+    f: F({ inflow: 1, speed: .7, fanOut: .6, fresh: .9, split: .3 }) },
+  { id: 'I1', type: 'wallet', x: 340, y: 130, at: 9000,  tag: 'burner', addr: '0x5be1…a94c',
+    f: F({ speed: .9, fanOut: .3, mixer: .5, fresh: 1, split: .6 }) },
+  { id: 'I2', type: 'wallet', x: 340, y: 270, at: 9400,  tag: 'burner', addr: '0x2d90…7b18',
+    f: F({ speed: .9, fanOut: .2, bridge: .5, fresh: .9, split: .4 }) },
+  { id: 'I3', type: 'wallet', x: 340, y: 410, at: 9800,  tag: 'burner', addr: '0xe4a7…30cd',
+    f: F({ speed: .7, fanOut: .1, fresh: .8, split: .2 }) },
+  { id: 'M',  type: 'contract', x: 480, y: 130, at: 11400, tag: 'mixer', addr: '0x6c3b…d1f4',
+    f: F({ inflow: .2, speed: .5, fanOut: .9, mixer: 1, fresh: .2, split: .8 }) },
+  { id: 'B',  type: 'contract', x: 452, y: 270, at: 12200, tag: 'bridge', addr: '0xa2f5…9e60',
+    f: F({ speed: .6, fanOut: .1, bridge: 1, split: .3 }) },
+  { id: 'I4', type: 'wallet', x: 480, y: 410, at: 13000, tag: 'burner', addr: '0x18f6…b2e9',
+    f: F({ speed: .8, fanOut: .1, fresh: 1, split: .2 }) },
+  { id: 'B2', type: 'wallet', x: 604, y: 270, at: 15900, tag: 'TRON wallet', addr: 'TQn8…Zr4x',
+    f: F({ speed: .9, fanOut: .1, bridge: 1, fresh: .9, split: .3 }) },
+  { id: 'D1', type: 'wallet', x: 700, y: 130, at: 17400, tag: 'deposit', addr: '0x83d2…c7a1',
+    f: F({ speed: 1, fresh: .7, split: .1, service: .91 }) },
+  { id: 'D3', type: 'wallet', x: 700, y: 410, at: 18600, tag: 'deposit', addr: '0xf19e…44b3',
+    f: F({ speed: .95, fresh: .7, split: .1, service: .90 }) },
+  { id: 'D2', type: 'wallet', x: 700, y: 270, at: 19600, tag: 'deposit', addr: 'TLb5…Wm9c',
+    f: F({ speed: .9, fresh: .7, split: .1, service: .95 }) },
+  { id: 'H',  type: 'hot', x: 830, y: 270, at: 21000, tag: 'hot wallet', addr: '0xb7c0…19ea',
+    f: F({ speed: .4, fanOut: .5, service: .97 }) },
+];
+const EDGES = [
+  { from: 'V1', to: 'R',  amt: 12000, at: 5400,  dur: 700 },
+  { from: 'V2', to: 'R',  amt: 8500,  at: 6700,  dur: 700 },
+  { from: 'V3', to: 'R',  amt: 21000, at: 7100,  dur: 700 },
+  { from: 'R',  to: 'I1', amt: 14000, at: 8800,  dur: 800 },
+  { from: 'R',  to: 'I2', amt: 18000, at: 9200,  dur: 800 },
+  { from: 'R',  to: 'I3', amt: 8500,  at: 9600,  dur: 800 },
+  { from: 'I1', to: 'M',  amt: 13900, at: 11200, dur: 800 },
+  { from: 'I2', to: 'B',  amt: 17800, at: 12000, dur: 800 },
+  { from: 'I3', to: 'I4', amt: 8400,  at: 12800, dur: 800 },
+  { from: 'B',  to: 'B2', amt: 17700, at: 15700, dur: 900, dash: true },
+  { from: 'M',  to: 'D1', amt: 13500, at: 17200, dur: 900, dash: true },
+  { from: 'I4', to: 'D3', amt: 8300,  at: 18400, dur: 900 },
+  { from: 'B2', to: 'D2', amt: 17600, at: 19400, dur: 900 },
+  { from: 'D1', to: 'H',  amt: 13500, at: 21000, dur: 800 },
+  { from: 'D2', to: 'H',  amt: 17600, at: 21400, dur: 800 },
+  { from: 'D3', to: 'H',  amt: 8300,  at: 21800, dur: 800 },
+];
+// handwritten margin notes: appear at `at`, arrow optional [x1,y1,cx,cy,x2,y2]
+const NOTES = [
+  { at: 7500,  x: 205, y: 372, lines: ['3 victims,', 'one wallet'], arrow: [205, 350, 203, 338, 201, 322], until: 24000 },
+  { at: 9300,  x: 240, y: 100, lines: ['splits within minutes'], arrow: [262, 110, 288, 132, 290, 158], until: 24000 },
+  { at: 11500, x: 486, y: 84,  lines: ['mixer: trail goes cold'], arrow: [484, 92, 484, 98, 482, 110], until: 24000 },
+  { at: 15900, x: 528, y: 222, lines: ['cross-chain bridge'], arrow: [528, 232, 526, 242, 528, 258], until: 24000 },
+  { at: 13100, x: 412, y: 462, lines: ['hop, hop, hop...'], arrow: [412, 448, 412, 438, 412, 424], until: 24000 },
+  { at: 19700, x: 700, y: 474, lines: ['3 fresh', 'deposit addresses'], arrow: [700, 458, 700, 452, 700, 446], until: 24000 },
+  { at: 33800, x: 578, y: 92,  lines: ['all roads lead', 'to ONE exchange'] },
+  { at: 35600, x: 765, y: 486, lines: ['ExampleX Exchange*', '93% match'], green: true },
+];
+const HOPS = [[5200, 0], [6700, 1], [8800, 1], [11200, 2], [15700, 4], [21000, 5]];
+const AI_SEQ = [{ id: 'R', from: 24500 }, { id: 'M', from: 27000 }, { id: 'D2', from: 29800 }];
+const ADDR = '0x9f3a7c41b2d85e60aa19c3f7d2e48b05c21e6d74';
+const FREEZE_LINES = [
+  [36000, 'To', 'ExampleX Exchange, compliance team*'],
+  [36700, 'Wallets', 'D1, D2, D3 and the hot wallet'],
+  [37400, 'Funds', '39,400 USDT reached the exchange'],
+  [38100, 'Ask', 'Freeze, preserve KYC and logs'],
+  [38800, 'Match', 'deposit-then-sweep pattern · 93%'],
+];
+
+/* =================================================================
+ *  HELPERS
+ * ================================================================= */
+const $ = (s) => document.querySelector(s);
+const NS = 'http://www.w3.org/2000/svg';
+const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const ease = (u) => 1 - Math.pow(1 - u, 3);
+const lerp = (a, b, u) => a + (b - a) * u;
+const fmt = (n) => Math.round(n).toLocaleString('en-US');
+function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in (attrs || {})) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+const NODEMAP = {}; NODES.forEach(n => NODEMAP[n.id] = n);
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const narrowMQ = matchMedia('(max-width: 820px)');
+NODES.forEach(n => { if (n.f) { n.res = score(n.f); n.risk = n.res.p; } });
+const CONF = ['D1', 'D2', 'D3', 'H'].reduce((s, id) => s + NODEMAP[id].f.service, 0) / 4;
+
+// heat colours read from CSS variables so light/dark both work
+let STOPS = [];
+function hexRGB(h) { h = h.trim().replace('#', ''); return [0, 2, 4].map(i => parseInt(h.substr(i, 2), 16)); }
+function readStops() {
+  const cs = getComputedStyle(document.documentElement);
+  STOPS = [[0, hexRGB(cs.getPropertyValue('--green'))], [.5, hexRGB(cs.getPropertyValue('--mustard'))], [1, hexRGB(cs.getPropertyValue('--red'))]];
+  NODES.forEach(n => n._col = null);
+}
+function heatColor(p) {
+  p = clamp(p);
+  for (let i = 1; i < STOPS.length; i++) if (p <= STOPS[i][0]) {
+    const [p0, c0] = STOPS[i - 1], [p1, c1] = STOPS[i], u = (p - p0) / (p1 - p0);
+    return 'rgb(' + c0.map((c, j) => Math.round(lerp(c, c1[j], u))).join(',') + ')';
+  }
+  return 'rgb(' + STOPS[2][1].join(',') + ')';
+}
+function wobble(cx, cy, rx, ry, seed) {           // hand-drawn loop that slightly overshoots its start
+  let s = seed; const rnd = () => (s = (s * 9301 + 49297) % 233280) / 233280;
+  const N = 16, pts = [];
+  for (let i = 0; i <= N + 2; i++) {
+    const a = -Math.PI / 2 + (i / N) * Math.PI * 2, j = 1 + (rnd() - .5) * .08;
+    pts.push([cx + Math.cos(a) * rx * j + (i > N ? 7 : 0), cy + Math.sin(a) * ry * j + (i > N ? 9 : 0)]);
+  }
+  let d = 'M' + pts[0][0].toFixed(1) + ' ' + pts[0][1].toFixed(1);
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
+    d += ' C' + [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6, p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6, p2[0], p2[1]].map(v => v.toFixed(1)).join(' ');
+  }
+  return d;
+}
+
+/* =================================================================
+ *  BUILD THE GRAPH
+ * ================================================================= */
+const svg = $('#g');
+const gEdges = el('g', {}, svg), gFlow = el('g', {}, svg), gLab = el('g', {}, svg), gNodes = el('g', {}, svg), gInk = el('g', {}, svg);
+const RAD = { victim: 9, reported: 12, wallet: 10, contract: 12, hot: 19 };
+const rad = (n) => RAD[n.type] || 10;
+
+EDGES.forEach((e) => {
+  const a = NODEMAP[e.from], b = NODEMAP[e.to];
+  const x1 = a.x + rad(a) + 3, x2 = b.x - rad(b) - 3, xm = (x1 + x2) / 2;
+  const d = `M${x1} ${a.y} C${xm} ${a.y} ${xm} ${b.y} ${x2} ${b.y}`;
+  e.path = el('path', { class: 'edge' + (e.dash ? ' dash' : ''), d }, gEdges);
+  e.len = e.path.getTotalLength();
+  e.path.style.strokeWidth = (1.4 + Math.sqrt(e.amt) / 55).toFixed(2);
+  e.path.style.strokeDasharray = e.dash ? '7 6' : e.len + ' ' + e.len;
+  e.path.style.opacity = 0;
+  if (!e.dash) e.flow = el('path', { class: 'flow', d, 'stroke-width': (2.6 + Math.sqrt(e.amt) / 70).toFixed(1) }, gFlow);
+  const mid = e.path.getPointAtLength(e.len / 2);
+  e.lab = el('text', { class: 'elabel', x: mid.x, y: mid.y + (e.dash ? 20 : -8) }, gLab); e.lab.textContent = fmt(e.amt);
+});
+function hexPts(r) { return [0, 1, 2, 3, 4, 5].map(i => { const a = Math.PI / 3 * i; return (Math.cos(a) * r).toFixed(1) + ',' + (Math.sin(a) * r).toFixed(1); }).join(' '); }
+NODES.forEach(n => {
+  n.g = el('g', { class: 'node', transform: `translate(${n.x} ${n.y})`, tabindex: 0, role: 'button', 'aria-label': n.tag + ' ' + n.addr }, gNodes);
+  const sh = el('g', { class: 'shape' }, n.g);
+  if (n.type === 'victim') { n.body = el('circle', { r: 9, class: 'body-s' }, sh); n.body.style.stroke = 'var(--ink)'; n.body.style.strokeWidth = 2; n.body.style.paintOrder = 'normal'; }
+  else if (n.type === 'contract') n.body = el('rect', { x: -10, y: -10, width: 20, height: 20, transform: 'rotate(45)', class: 'body-s' }, sh);
+  else if (n.type === 'hot') n.body = el('polygon', { points: hexPts(19), class: 'body-s' }, sh);
+  else n.body = el('circle', { r: rad(n), class: 'body-s' }, sh);
+  if (n.type === 'reported') el('circle', { class: 'pulse', r: 12 }, n.g);
+  el('circle', { class: 'halo', r: rad(n) + 8 }, n.g);
+  const t1 = el('text', { class: 'tag', y: rad(n) + 20 }, n.g); t1.textContent = n.tag;
+  n.g.addEventListener('click', () => pin(n.id));
+  n.g.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); pin(n.id); } });
+});
+// margin notes
+NOTES.forEach(nt => {
+  nt.g = el('g', { class: 'note' + (nt.green ? ' green' : '') }, gInk);
+  const tx = el('text', { x: nt.x, y: nt.y }, nt.g);
+  nt.lines.forEach((ln, i) => { const ts = el('tspan', { x: nt.x, dy: i ? 25 : 0 }, tx); ts.textContent = ln; });
+  if (nt.arrow) {
+    const a = nt.arrow; nt.ap = el('path', { class: 'arrow', d: `M${a[0]} ${a[1]} Q${a[2]} ${a[3]} ${a[4]} ${a[5]}` }, nt.g);
+    nt.al = nt.ap.getTotalLength(); nt.ap.style.strokeDasharray = nt.al + ' ' + nt.al;
+    const ex = a[4], ey = a[5], dx = ex - a[2], dy = ey - a[3], L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
+    nt.ah = el('path', { class: 'arrow', d: `M${ex - ux * 9 - uy * 6} ${ey - uy * 9 + ux * 6} L${ex} ${ey} L${ex - ux * 9 + uy * 6} ${ey - uy * 9 - ux * 6}` }, nt.g);
+  }
+});
+// hand-drawn ink: exchange cluster loop + red-pen circle on the hot wallet
+const hullP = el('path', { class: 'ink g', d: wobble(770, 272, 132, 192, 7) }, gInk);
+const hotP = el('path', { class: 'ink', d: wobble(830, 270, 34, 34, 21) }, gInk);
+[hullP, hotP].forEach(p => { p.len = p.getTotalLength(); p.style.strokeDasharray = p.len + ' ' + p.len; p.style.strokeDashoffset = p.len; });
+
+/* =================================================================
+ *  STATIC UI
+ * ================================================================= */
+const stepsNav = $('#steps');
+STEPS.forEach((s, i) => {
+  const b = document.createElement('button'); b.className = 'stp'; b.innerHTML = '0' + (i + 1) + ' <span>' + s.name + '</span>';
+  b.addEventListener('click', () => scrollToT(B[i] + 1));
+  stepsNav.appendChild(b); s.btn = b;
+});
+const legendEls = {
+  type: '<span><i class="lg-h"></i>victim</span><span><i class="lg-r"></i>reported wallet</span><span><i class="lg-w"></i>wallet</span><span><i class="lg-d"></i>mixer / bridge</span>',
+  heat: '<span><i class="lg-bar"></i>low risk &rarr; high risk</span>',
+};
+const E = {
+  num: $('#capNum'), title: $('#capTitle'), text: $('#capText'), hint: $('#hint'), prog: $('#prog'),
+  complaint: $('#complaint'), fAddr: $('#fAddr'), stamp: $('#stamp'), card: $('#card'), status: $('#status'), legend: $('#legend'),
+  sW: $('#sWallets'), sH: $('#sHops'), sC: $('#sChains'), sF: $('#sFunds'), auto: $('#auto'),
+};
+
+/* =================================================================
+ *  SCROLL -> STORY TIME
+ * ================================================================= */
+const story = $('#story');
+function scrollRange() { return Math.max(1, story.offsetHeight - window.innerHeight); }
+function scrollP() { return clamp(-story.getBoundingClientRect().top / scrollRange()); }
+function pToT(p) { for (let i = 1; i < CUM.length; i++) if (p <= CUM[i]) return lerp(B[i - 1], B[i], (p - CUM[i - 1]) / (CUM[i] - CUM[i - 1])); return END; }
+function tToP(t) { for (let i = 1; i < B.length; i++) if (t <= B[i]) return lerp(CUM[i - 1], CUM[i], (t - B[i - 1]) / (B[i] - B[i - 1])); return 1; }
+function scrollToT(t) {
+  const top = window.scrollY + story.getBoundingClientRect().top + tToP(t) * scrollRange();
+  window.scrollTo({ top, behavior: reduceMotion ? 'auto' : 'smooth' });
+}
+$('#goBtn').addEventListener('click', (ev) => { ev.preventDefault(); window.scrollTo({ top: window.scrollY + story.getBoundingClientRect().top, behavior: reduceMotion ? 'auto' : 'smooth' }); });
+
+let t = 0, target = 0, lastTs = null, pinned = null, capStep = -1, cache = {};
+function stepIndex(tt) { let i = 0; for (let k = 0; k < STEPS.length; k++) if (tt >= B[k]) i = k; return i; }
+function camX(tt) {                                  // on narrow screens the view pans along the graph
+  const K = [[0, 0], [9000, 0], [15000, 180], [21000, 400], [40000, 400]];
+  for (let i = 1; i < K.length; i++) if (tt <= K[i][0]) return lerp(K[i - 1][1], K[i][1], (tt - K[i - 1][0]) / (K[i][0] - K[i - 1][0]));
+  return 400;
+}
+
+/* =================================================================
+ *  RENDER (pure function of t, except the ambient ink-flow)
+ * ================================================================= */
+function render() {
+  const tt = t, si = stepIndex(tt);
+  E.prog.style.width = (scrollP() * 100).toFixed(1) + '%';
+
+  // caption
+  if (si !== capStep) {
+    capStep = si;
+    E.num.textContent = '0' + (si + 1) + ' / 04'; E.title.textContent = STEPS[si].title; E.text.textContent = STEPS[si].text;
+    [E.num, E.title, E.text].forEach(n => { n.classList.remove('swap'); void n.offsetWidth; n.classList.add('swap'); });
+    E.legend.innerHTML = si >= 2 ? legendEls.heat : legendEls.type;
+  }
+  STEPS.forEach((s, i) => { s.btn.classList.toggle('on', i === si); s.btn.classList.toggle('done', i < si); });
+  E.hint.style.opacity = tt < 600 ? 1 : 0;
+
+  // camera (phones only)
+  if (narrowMQ.matches) svg.setAttribute('viewBox', camX(tt).toFixed(1) + ' 60 560 450'); else if (cache.vb !== 'full') svg.setAttribute('viewBox', '0 60 960 450');
+  cache.vb = narrowMQ.matches ? 'cam' : 'full';
+
+  // complaint form (step 1)
+  const cOn = tt > 150 && tt < 5800;
+  E.complaint.style.display = cOn ? 'block' : 'none';
+  if (cOn) {
+    const fade = Math.min(clamp((tt - 150) / 500), clamp((5800 - tt) / 700));
+    E.complaint.style.opacity = fade;
+    E.complaint.style.transform = 'translate(-50%,-50%) rotate(-.5deg) scale(' + (0.95 + 0.05 * fade) + ')';
+    E.fAddr.textContent = ADDR.slice(0, Math.floor(clamp((tt - 900) / 2300) * ADDR.length));
+    E.stamp.classList.toggle('on', tt > 3900);
+  }
+
+  // nodes
+  const heatOn = tt >= AI_START;
+  const auto = autoSel(tt);
+  const sel = pinned || (auto ? auto.id : null);
+  NODES.forEach(n => {
+    const on = tt >= n.at;
+    n.g.classList.toggle('on', on);
+    n.g.classList.toggle('sel', on && sel === n.id && tt >= AI_START);
+    let col;
+    if (heatOn && n.risk !== undefined) col = heatColor(n.risk);
+    else if (n.type === 'victim') col = 'var(--paper)';
+    else if (n.type === 'reported') col = 'var(--red)';
+    else if (n.type === 'contract') col = 'var(--mustard)';
+    else col = 'var(--ink)';
+    if (n._col !== col) { n._col = col; n.body.style.fill = col; }
+  });
+
+  // edges
+  const flowOn = tt >= FLOW_START;
+  EDGES.forEach(e => {
+    const p = clamp((tt - e.at) / e.dur);
+    if (e.dash) e.path.style.opacity = p; else { e.path.style.opacity = p > 0 ? 1 : 0; e.path.style.strokeDashoffset = e.len * (1 - ease(p)); }
+    e.lab.classList.toggle('on', tt >= Math.max(e.at + e.dur, FLOW_START));
+    if (e.flow) e.flow.classList.toggle('on', flowOn && p >= 1);
+  });
+
+  // notes + ink
+  NOTES.forEach(nt => {
+    const on = tt >= nt.at && tt < (nt.until || 1e9); nt.g.classList.toggle('on', on);
+    if (nt.ap) { const p = ease(clamp((tt - nt.at - 350) / 500)); nt.ap.style.strokeDashoffset = nt.al * (1 - p); nt.ah.style.opacity = p > .92 ? 1 : 0; }
+  });
+  hullP.style.strokeDashoffset = hullP.len * (1 - ease(clamp((tt - 33200) / 2200)));
+  hotP.style.strokeDashoffset = hotP.len * (1 - ease(clamp((tt - 34800) / 900)));
+
+  // board
+  let hop = 0; HOPS.forEach(h => { if (tt >= h[0]) hop = h[1]; });
+  const seen = NODES.filter(n => tt >= n.at).length;
+  const funds = EDGES.filter(e => e.to === 'R' && tt >= e.at + e.dur).reduce((s, e) => s + e.amt, 0);
+  const chains = tt >= 15900 ? 2 : (tt >= 5200 ? 1 : 0);
+  setTxt(E.sW, seen ? seen : '–'); setTxt(E.sH, tt >= 5200 ? hop : '–'); setTxt(E.sC, chains ? (chains === 2 ? 'ETH + TRON' : 'ETH') : '–'); setTxt(E.sF, funds ? fmt(funds) + ' USDT' : '–');
+  const tc = Math.min(tt, 24000);
+  const scanned2 = Math.floor(Math.max(0, tc - 6000) / 1000 * 310 + Math.max(0, tc - 15500) / 1000 * 420);
+  setTxt(E.status, tt < 5200 ? 'waiting for a report' : (tt < 24000 ? 'indexing… ' + fmt(scanned2) + ' txs' : 'indexed ' + fmt(scanned2) + ' txs'));
+
+  renderCard(tt, si);
+}
+function setTxt(node, v) { v = String(v); if (node._v !== v) { node._v = v; node.textContent = v; } }
+function autoSel(tt) { if (tt < AI_SEQ[0].from || tt >= FREEZE_START) return null; let s = AI_SEQ[0]; AI_SEQ.forEach(x => { if (tt >= x.from) s = x; }); return s; }
+function verdict(n, p) { if (n.f.service > .7) return 'looks like an exchange'; return p >= .7 ? 'suspicious' : p >= .4 ? 'worth watching' : 'looks legitimate'; }
+
+function renderCard(tt, si) {
+  const mode = si < 2 ? 'none' : (si === 2 ? 'insp' : (pinned ? 'insp' : 'freeze'));
+  const card = E.card;
+  card.classList.toggle('on', mode !== 'none');
+  if (mode === 'none') { cache.card = 'none'; return; }
+  if (mode === 'freeze') {
+    if (cache.card !== 'freeze') {
+      cache.card = 'freeze';
+      card.innerHTML = '<div class="ch"><span>Draft · for investigators</span><span>ready</span></div><div class="freeze-t">Freeze request</div><dl class="fr">' +
+        FREEZE_LINES.map(l => '<dt>' + l[1] + '</dt><dd>' + l[2].replace('93%', '<b>93%</b>') + '</dd>').join('') + '</dl>';
+      card._dd = [...card.querySelectorAll('dd')];
+    }
+    card._dd.forEach((d, i) => d.classList.toggle('on', tt >= FREEZE_LINES[i][0]));
+    return;
+  }
+  const sel = pinned || (autoSel(tt) ? autoSel(tt).id : null);
+  const n = sel ? NODEMAP[sel] : null;
+  if (!n || !n.f || tt < n.at) { if (cache.card !== 'empty') { cache.card = 'empty'; card.innerHTML = '<div class="ch"><span>Wallet inspector</span></div><p style="font-size:14px;color:var(--muted);margin:10px 0 0">Click any wallet in the graph to see why it got its score.</p>'; } return; }
+  const s = autoSel(tt); let frac = 1; if (!pinned && s) frac = ease(clamp((tt - s.from) / 900));
+  const key = 'insp:' + n.id;
+  if (cache.card !== key) {
+    cache.card = key;
+    const top = n.res.parts.slice().sort((a, b) => Math.abs(b.c) - Math.abs(a.c)).slice(0, 3);
+    card.innerHTML = '<div class="ch"><span>' + n.tag + '</span><span>' + n.addr + '</span></div>' +
+      '<div class="score"><b id="sc">0</b><span>/ 100 risk</span><em>' + verdict(n, n.risk) + '</em></div>' +
+      '<ul class="why">' + top.map(r => '<li><span>' + r.label + '</span><span class="bar"><i style="width:' + Math.min(100, Math.abs(r.c) / 2.6 * 100).toFixed(0) + '%;background:' + (r.c >= 0 ? 'var(--red)' : 'var(--green)') + '"></i></span><span class="v">' + (r.c >= 0 ? '+' : '') + r.c.toFixed(1) + '</span></li>').join('') + '</ul>' +
+      (pinned ? '<button class="unpin" id="unpin">back to auto</button>' : '');
+    const u = $('#unpin'); if (u) u.onclick = () => { pinned = null; cache.card = ''; };
+    cache.sc = card.querySelector('#sc');
+  }
+  const v = String(Math.round(n.risk * frac * 100)); if (cache.sc && cache.sc.textContent !== v) cache.sc.textContent = v;
+}
+function pin(id) { const n = NODEMAP[id]; if (!n.f || t < AI_START) return; pinned = id; cache.card = ''; }
+
+/* =================================================================
+ *  LOOP + AUTO-PLAY
+ * ================================================================= */
+function frame(ts) {
+  if (lastTs === null) lastTs = ts;
+  const dt = Math.min(100, ts - lastTs); lastTs = ts;
+  target = pToT(scrollP());
+  if (reduceMotion) t = target; else { t += (target - t) * Math.min(1, dt / 110); if (Math.abs(target - t) < 4) t = target; }
+  render();
+  if (!reduceMotion && t >= FLOW_START) {                // ambient: red ink keeps flowing along the money trail
+    const off = -((ts / 45) % 13);
+    EDGES.forEach(e => { if (e.flow && e.flow.classList.contains('on')) e.flow.style.strokeDashoffset = off; if (e.dash) e.path.style.strokeDashoffset = off; });
+  }
+  requestAnimationFrame(frame);
+}
+let auto = false, autoLast = 0;
+function stopAuto() { auto = false; E.auto.textContent = 'Auto-play'; }
+function autoTick(ts) {
+  if (!auto) return;
+  const dt = Math.min(64, ts - autoLast); autoLast = ts;
+  window.scrollBy(0, scrollRange() / 58000 * dt);
+  if (scrollP() >= 1) { stopAuto(); return; }
+  requestAnimationFrame(autoTick);
+}
+E.auto.addEventListener('click', () => {
+  if (auto) { stopAuto(); return; }
+  const r = story.getBoundingClientRect();
+  if (r.top > 0 || scrollP() >= 1) window.scrollTo({ top: window.scrollY + r.top, behavior: 'auto' });
+  auto = true; E.auto.textContent = 'Pause'; autoLast = performance.now(); requestAnimationFrame(autoTick);
+});
+['wheel', 'touchstart', 'keydown'].forEach(ev => window.addEventListener(ev, () => { if (auto) stopAuto(); }, { passive: true }));
+
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readStops);
+readStops();
+window.__demo = { p: (p) => { window.scrollTo(0, window.scrollY + story.getBoundingClientRect().top + p * scrollRange()); } };
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
