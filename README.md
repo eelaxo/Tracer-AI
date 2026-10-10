@@ -82,5 +82,5 @@ delete the `activity` table from your Postgres dashboard, or run
 - `build_case()` in `app.py`: replace with real chain indexing
 - `score()`: replace the hand-set weights with a trained model
 - `simulated_ncrp_complaint()` / `/api/ncrp-lookup`: replace with a real NCRP/SAHYOG integration
-- `cases.json`: also move to Postgres, same as `/visitors` now does, if you
+- ✅`cases.json`: also move to Postgres, same as `/visitors` now does, if you
   want case history to survive restarts too
