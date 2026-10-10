@@ -85,13 +85,33 @@ async def record_visit(request: Request, call_next):
     return response
 
 # ---------------------------------------------------------------- storage
-def load_db() -> dict:
-    if DB_FILE.exists():
-        return json.loads(DB_FILE.read_text())
-    return {}
+def _file_db() -> dict:
+    return json.loads(DB_FILE.read_text()) if DB_FILE.exists() else {}
 
-def save_db(db: dict) -> None:
-    DB_FILE.write_text(json.dumps(db, indent=2))
+def save_case(case: dict) -> None:
+    if not DATABASE_URL:
+        db = _file_db(); db[case["case_id"]] = case
+        DB_FILE.write_text(json.dumps(db, indent=2)); return
+    with psycopg2.connect(DATABASE_URL) as conn, conn.cursor() as cur:
+        cur.execute("CREATE TABLE IF NOT EXISTS cases (id TEXT PRIMARY KEY, data JSONB)")
+        cur.execute("INSERT INTO cases (id, data) VALUES (%s, %s)", (case["case_id"], json.dumps(case)))
+
+def get_case_by_id(case_id: str) -> dict | None:
+    if not DATABASE_URL:
+        return _file_db().get(case_id)
+    with psycopg2.connect(DATABASE_URL) as conn, conn.cursor() as cur:
+        cur.execute("CREATE TABLE IF NOT EXISTS cases (id TEXT PRIMARY KEY, data JSONB)")
+        cur.execute("SELECT data FROM cases WHERE id = %s", (case_id,))
+        row = cur.fetchone()
+        return row[0] if row else None
+
+def list_all_cases() -> list[dict]:
+    if not DATABASE_URL:
+        return list(_file_db().values())
+    with psycopg2.connect(DATABASE_URL) as conn, conn.cursor() as cur:
+        cur.execute("CREATE TABLE IF NOT EXISTS cases (id TEXT PRIMARY KEY, data JSONB)")
+        cur.execute("SELECT data FROM cases")
+        return [row[0] for row in cur.fetchall()]
 
 # ---------------------------------------------------------------- fake but plausible addresses
 def fake_address(rng: random.Random, chain: str) -> str:
@@ -291,9 +311,7 @@ def submit_report(r: ReportIn, request: Request):
     if len(wallet) < 4:
         raise HTTPException(400, "Wallet address looks too short.")
     case = build_case(wallet, r.chain.upper(), max(r.amount, 1), r.category)
-    db = load_db()
-    db[case["case_id"]] = case
-    save_db(db)
+    save_case(case)
     log_activity(client_ip(request), "/api/report", wallet)
     return case
 
@@ -303,7 +321,6 @@ def ncrp_lookup(complaint_id: str):
 
 @app.get("/api/cases")
 def list_cases():
-    db = load_db()
     rows = [
         {
             "case_id": c["case_id"], "created_at": c["created_at"],
@@ -311,17 +328,17 @@ def list_cases():
             "confidence": c["vasp"]["confidence"],
             "funds_reached_exchange": c["summary"]["funds_reached_exchange"],
         }
-        for c in db.values()
+        for c in list_all_cases()
     ]
     rows.sort(key=lambda x: -x["created_at"])
     return rows
 
 @app.get("/api/case/{case_id}")
 def get_case(case_id: str):
-    db = load_db()
-    if case_id not in db:
+    case = get_case_by_id(case_id)
+    if not case:
         raise HTTPException(404, "Case not found.")
-    return db[case_id]
+    return case
 
 # ---------------------------------------------------------------- pages
 # Each page is one self-contained HTML file. We deliberately do NOT mount the
