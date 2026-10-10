@@ -7,11 +7,17 @@ Tracer AI - minimal working prototype backend.
 - Risk scoring is a small transparent weighted formula (documented
   in the pitch deck) instead of a trained model.
 - Storage is a single JSON file (cases.json) - good enough for a
-  hackathon demo, zero setup, survives restarts.
+  hackathon demo, zero setup, but it resets on Render's free tier
+  whenever the service restarts.
+- Visitor activity (page views + submitted wallet addresses) is
+  logged to a real Postgres database instead, so it survives
+  restarts. See README for how to point this at a free Supabase/
+  Neon database via the DATABASE_URL environment variable.
 
 Pages:
-    /     scroll-driven story (demo.html) - how the system works
-    /app  the working tool (app.html)     - enter or pull a report
+    /          scroll-driven story (demo.html) - how the system works
+    /app       the working tool (app.html)     - enter or pull a report
+    /visitors  password-protected activity log (owner only)
 
 Run:
     pip install -r requirements.txt
@@ -19,22 +25,64 @@ Run:
     open http://127.0.0.1:8000
 """
 import hashlib
+import html
 import json
 import math
+import os
 import random
+import secrets
 import string
 import time
 import uuid
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+import psycopg2
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from pydantic import BaseModel
 
 APP_DIR = Path(__file__).parent
 DB_FILE = APP_DIR / "cases.json"
 
 app = FastAPI(title="Tracer AI (prototype)")
+
+# ---------------------------------------------------------------- visitor log (Postgres)
+# Separate from cases.json: this is the part that must survive a
+# Render restart, so it lives in a real database, not a local file.
+DATABASE_URL = os.environ.get("DATABASE_URL")  # set this in Render's Environment tab
+VISITORS_PASSWORD = os.environ.get("VISITORS_PASSWORD")  # set this too, don't hardcode it
+
+def log_activity(ip: str, path: str, wallet: str | None = None) -> None:
+    """Best-effort: a logging hiccup should never break the site itself."""
+    if not DATABASE_URL:
+        return
+    try:
+        with psycopg2.connect(DATABASE_URL) as conn, conn.cursor() as cur:
+            cur.execute(
+                "CREATE TABLE IF NOT EXISTS activity ("
+                "id SERIAL PRIMARY KEY, ts TIMESTAMPTZ DEFAULT now(), "
+                "ip TEXT, path TEXT, wallet TEXT)"
+            )
+            cur.execute(
+                "INSERT INTO activity (ip, path, wallet) VALUES (%s, %s, %s)",
+                (ip, path, (wallet or None)[:200] if wallet else None),
+            )
+    except Exception as e:
+        print("activity log failed:", e)
+
+def client_ip(request: Request) -> str:
+    # Render sits behind a proxy, so the real visitor IP is in this
+    # header, not request.client.host (that would just show Render's).
+    fwd = request.headers.get("x-forwarded-for")
+    return fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "unknown")
+
+@app.middleware("http")
+async def record_visit(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path not in ("/favicon.ico",) and not request.url.path.startswith("/api/"):
+        log_activity(client_ip(request), request.url.path)
+    return response
 
 # ---------------------------------------------------------------- storage
 def load_db() -> dict:
@@ -238,7 +286,7 @@ class ReportIn(BaseModel):
     source: str = "manual"
 
 @app.post("/api/report")
-def submit_report(r: ReportIn):
+def submit_report(r: ReportIn, request: Request):
     wallet = r.wallet.strip()
     if len(wallet) < 4:
         raise HTTPException(400, "Wallet address looks too short.")
@@ -246,6 +294,7 @@ def submit_report(r: ReportIn):
     db = load_db()
     db[case["case_id"]] = case
     save_db(db)
+    log_activity(client_ip(request), "/api/report", wallet)
     return case
 
 @app.get("/api/ncrp-lookup/{complaint_id}")
@@ -277,6 +326,50 @@ def get_case(case_id: str):
 # ---------------------------------------------------------------- pages
 # Each page is one self-contained HTML file. We deliberately do NOT mount the
 # whole folder as static files - that would expose app.py and cases.json.
+basic_auth = HTTPBasic()
+
+def require_owner(creds: HTTPBasicCredentials = Depends(basic_auth)):
+    if not VISITORS_PASSWORD:
+        raise HTTPException(500, "Set VISITORS_PASSWORD on the server first (see README).")
+    if not secrets.compare_digest(creds.password, VISITORS_PASSWORD):
+        raise HTTPException(401, "Wrong password", headers={"WWW-Authenticate": "Basic"})
+    return True
+
+@app.get("/visitors", response_class=HTMLResponse)
+def visitors_page(_: bool = Depends(require_owner)):
+    if not DATABASE_URL:
+        return HTMLResponse("<p>Set DATABASE_URL on the server first (see README).</p>")
+    with psycopg2.connect(DATABASE_URL) as conn, conn.cursor() as cur:
+        cur.execute(
+            "CREATE TABLE IF NOT EXISTS activity ("
+            "id SERIAL PRIMARY KEY, ts TIMESTAMPTZ DEFAULT now(), "
+            "ip TEXT, path TEXT, wallet TEXT)"
+        )
+        cur.execute("SELECT ts, ip, path, wallet FROM activity ORDER BY ts DESC LIMIT 500")
+        rows = cur.fetchall()
+    def esc(v): return html.escape(str(v)) if v is not None else ""
+    body = "".join(
+        f"<tr><td>{esc(ts.strftime('%Y-%m-%d %H:%M:%S'))}</td><td class='m'>{esc(ip)}</td>"
+        f"<td>{esc(path)}</td><td class='m'>{esc(wallet) or '&ndash;'}</td></tr>"
+        for ts, ip, path, wallet in rows
+    )
+    return HTMLResponse(f"""<!doctype html><html><head><meta charset="utf-8">
+<title>Visitors &middot; $Tracer AI</title>
+<style>
+body{{background:#EEE9DD;color:#1C1B18;font:15px/1.5 system-ui,Arial,sans-serif;margin:0;padding:28px}}
+h1{{font:400 30px Georgia,serif;margin:0 0 4px}}
+.n{{color:#6C665B;font-size:13px;margin:0 0 18px}}
+table{{width:100%;border-collapse:collapse;font-size:13.5px;background:#F8F5EB;border:1px solid #D3DDEE}}
+th,td{{text-align:left;padding:7px 10px;border-bottom:1px solid #D3DDEE}}
+th{{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6C665B}}
+.m{{font-family:ui-monospace,Consolas,monospace}}
+</style></head><body>
+<h1>Visitors</h1>
+<p class="n">Last {len(rows)} events, most recent first. Owner-only page.</p>
+<table><thead><tr><th>Time (UTC)</th><th>IP</th><th>Page</th><th>Wallet submitted</th></tr></thead>
+<tbody>{body}</tbody></table>
+</body></html>""")
+
 @app.get("/")
 def story_page():
     return FileResponse(APP_DIR / "demo.html")
@@ -288,3 +381,9 @@ def tool_page():
 @app.get("/about")
 def about_page():
     return FileResponse(APP_DIR / "about.html")
+
+# Lets you just double-click app.py or run "py app.py" instead of typing
+# the uvicorn command by hand every time.
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)
