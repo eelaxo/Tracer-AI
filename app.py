@@ -62,7 +62,7 @@ def log_activity(ip: str, path: str, wallet: str | None = None) -> None:
     if not DATABASE_URL:
         return
     try:
-            with db_connect() as conn, conn.cursor() as cur:
+        with db_connect() as conn, conn.cursor() as cur:
             cur.execute(
                 "CREATE TABLE IF NOT EXISTS activity ("
                 "id SERIAL PRIMARY KEY, ts TIMESTAMPTZ DEFAULT now(), "
