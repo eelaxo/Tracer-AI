@@ -52,13 +52,17 @@ app = FastAPI(title="Tracer AI (prototype)")
 # Render restart, so it lives in a real database, not a local file.
 DATABASE_URL = os.environ.get("DATABASE_URL")  # set this in Render's Environment tab
 VISITORS_PASSWORD = os.environ.get("VISITORS_PASSWORD")  # set this too, don't hardcode it
+def db_connect():
+    # 3s timeout: if Supabase has paused or is unreachable, fail fast
+    # instead of hanging the whole site waiting on a dead connection.
+    return psycopg2.connect(DATABASE_URL, connect_timeout=3)
 
 def log_activity(ip: str, path: str, wallet: str | None = None) -> None:
     """Best-effort: a logging hiccup should never break the site itself."""
     if not DATABASE_URL:
         return
     try:
-        with psycopg2.connect(DATABASE_URL) as conn, conn.cursor() as cur:
+            with db_connect() as conn, conn.cursor() as cur:
             cur.execute(
                 "CREATE TABLE IF NOT EXISTS activity ("
                 "id SERIAL PRIMARY KEY, ts TIMESTAMPTZ DEFAULT now(), "
@@ -89,29 +93,39 @@ def _file_db() -> dict:
     return json.loads(DB_FILE.read_text()) if DB_FILE.exists() else {}
 
 def save_case(case: dict) -> None:
-    if not DATABASE_URL:
-        db = _file_db(); db[case["case_id"]] = case
-        DB_FILE.write_text(json.dumps(db, indent=2)); return
-    with psycopg2.connect(DATABASE_URL) as conn, conn.cursor() as cur:
-        cur.execute("CREATE TABLE IF NOT EXISTS cases (id TEXT PRIMARY KEY, data JSONB)")
-        cur.execute("INSERT INTO cases (id, data) VALUES (%s, %s)", (case["case_id"], json.dumps(case)))
+    if DATABASE_URL:
+        try:
+            with db_connect() as conn, conn.cursor() as cur:
+                cur.execute("CREATE TABLE IF NOT EXISTS cases (id TEXT PRIMARY KEY, data JSONB)")
+                cur.execute("INSERT INTO cases (id, data) VALUES (%s, %s)", (case["case_id"], json.dumps(case)))
+            return
+        except Exception as e:
+            print("save_case: DB unavailable, falling back to file ->", e)
+    db = _file_db(); db[case["case_id"]] = case
+    DB_FILE.write_text(json.dumps(db, indent=2))
 
 def get_case_by_id(case_id: str) -> dict | None:
-    if not DATABASE_URL:
-        return _file_db().get(case_id)
-    with psycopg2.connect(DATABASE_URL) as conn, conn.cursor() as cur:
-        cur.execute("CREATE TABLE IF NOT EXISTS cases (id TEXT PRIMARY KEY, data JSONB)")
-        cur.execute("SELECT data FROM cases WHERE id = %s", (case_id,))
-        row = cur.fetchone()
-        return row[0] if row else None
+    if DATABASE_URL:
+        try:
+            with db_connect() as conn, conn.cursor() as cur:
+                cur.execute("CREATE TABLE IF NOT EXISTS cases (id TEXT PRIMARY KEY, data JSONB)")
+                cur.execute("SELECT data FROM cases WHERE id = %s", (case_id,))
+                row = cur.fetchone()
+                return row[0] if row else None
+        except Exception as e:
+            print("get_case_by_id: DB unavailable, falling back to file ->", e)
+    return _file_db().get(case_id)
 
 def list_all_cases() -> list[dict]:
-    if not DATABASE_URL:
-        return list(_file_db().values())
-    with psycopg2.connect(DATABASE_URL) as conn, conn.cursor() as cur:
-        cur.execute("CREATE TABLE IF NOT EXISTS cases (id TEXT PRIMARY KEY, data JSONB)")
-        cur.execute("SELECT data FROM cases")
-        return [row[0] for row in cur.fetchall()]
+    if DATABASE_URL:
+        try:
+            with db_connect() as conn, conn.cursor() as cur:
+                cur.execute("CREATE TABLE IF NOT EXISTS cases (id TEXT PRIMARY KEY, data JSONB)")
+                cur.execute("SELECT data FROM cases")
+                return [row[0] for row in cur.fetchall()]
+        except Exception as e:
+            print("list_all_cases: DB unavailable, falling back to file ->", e)
+    return list(_file_db().values())
 
 # ---------------------------------------------------------------- fake but plausible addresses
 def fake_address(rng: random.Random, chain: str) -> str:
@@ -356,7 +370,7 @@ def require_owner(creds: HTTPBasicCredentials = Depends(basic_auth)):
 def visitors_page(_: bool = Depends(require_owner)):
     if not DATABASE_URL:
         return HTMLResponse("<p>Set DATABASE_URL on the server first (see README).</p>")
-    with psycopg2.connect(DATABASE_URL) as conn, conn.cursor() as cur:
+    with db_connect() as conn, conn.cursor() as cur:
         cur.execute(
             "CREATE TABLE IF NOT EXISTS activity ("
             "id SERIAL PRIMARY KEY, ts TIMESTAMPTZ DEFAULT now(), "
