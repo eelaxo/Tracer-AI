@@ -3,7 +3,6 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>$Tracer AI – live tool</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
@@ -55,38 +54,6 @@ a{color:inherit}
 .kicker{font:500 12.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
 h1{font:400 clamp(46px,7vw,86px)/.95 var(--serif);letter-spacing:-.02em;margin:0 0 14px}
 .lead{max-width:58ch;font-size:17.5px;margin:0}
-
-/* ---------- report form (a paper case file) ---------- */
-.file{position:relative;background:var(--paper-2);border:1px solid var(--rule);padding:24px 26px 18px;margin-top:14px;transform:rotate(-.25deg)}
-.file::before,.paper::before{content:"";position:absolute;top:-9px;left:50%;width:74px;height:17px;background:var(--tape);transform:translateX(-50%) rotate(-2deg)}
-.tabs{display:flex;gap:6px;margin-bottom:16px}
-.tab{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:none;border:0;border-bottom:2px solid transparent;padding:6px 8px;cursor:pointer}
-.tab:hover{color:var(--red)}
-.tab.on{color:var(--ink);border-bottom-color:var(--red)}
-.ncrp{display:flex;flex-wrap:wrap;gap:14px 16px;align-items:flex-end;margin-bottom:18px}
-.ncrp .f{flex:0 1 280px}
-.fine{font:400 11.5px var(--mono);color:var(--muted);flex-basis:100%}
-.fields{display:grid;grid-template-columns:1.15fr .8fr .85fr 2.6fr auto;gap:20px;align-items:end}
-@media (max-width:980px){.fields{grid-template-columns:1fr 1fr}.f.wide{grid-column:1/-1}.fields .btn{grid-column:1/-1}}
-.f{display:block;font:500 10.5px var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
-.f input,.f select{display:block;width:100%;margin-top:6px;font:500 16px var(--sans);letter-spacing:0;text-transform:none;color:var(--ink);background:transparent;border:0;border-bottom:1.5px solid var(--ink);border-radius:0;padding:6px 0}
-.f input.mono{font:500 14px var(--mono)}
-.f select option{background:var(--paper-2);color:var(--ink)}
-.f input:focus,.f select:focus{outline:0;border-bottom-color:var(--red)}
-.btn{font:500 12.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;border:1.5px solid var(--ink);background:transparent;color:var(--ink);padding:11px 18px;cursor:pointer;transition:background .2s,color .2s;white-space:nowrap}
-.btn:hover{background:var(--red);border-color:var(--red);color:#fff}
-.btn.primary{background:var(--ink);color:var(--paper)}
-.btn.primary:hover{background:var(--red);border-color:var(--red);color:#fff}
-.btn:disabled{opacity:.5;cursor:default}
-.btn.sm{padding:8px 14px;font-size:11.5px}
-.link{font:500 11.5px var(--mono);letter-spacing:.06em;background:none;border:0;border-bottom:1px dashed var(--muted);color:var(--muted);cursor:pointer;padding:0}
-.link:hover{color:var(--red);border-bottom-color:var(--red)}
-.run{font:500 12.5px var(--mono);letter-spacing:.04em;color:var(--muted);min-height:20px;margin-top:14px}
-.run b{color:var(--red);font-weight:500}
-.run.err{color:var(--red)}
-.recent{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:6px;font:400 11.5px var(--mono);color:var(--muted)}
-.chip{font:500 11.5px var(--mono);border:1px solid var(--rule);background:transparent;color:var(--ink);padding:4px 9px;cursor:pointer}
-.chip:hover{border-color:var(--red);color:var(--red)}
 
 /* ---------- result ---------- */
 #result{margin-top:52px;scroll-margin-top:76px}
@@ -162,52 +129,6 @@ td.m{font:400 12px var(--mono)}
 .rb{display:inline-block;min-width:36px;text-align:center;font:500 12px var(--mono);color:#fff;padding:1px 7px}
 footer{max-width:1240px;margin:0 auto;padding:22px 28px 34px;font:400 12.5px var(--mono);color:var(--muted);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--rule)}
 
-/* ---------- graph ---------- */
-.colhead{fill:var(--muted);font:500 11px var(--mono);letter-spacing:.09em;text-transform:uppercase;text-anchor:middle;opacity:0;transition:opacity .4s}
-.colhead.on{opacity:1}
-.hr{stroke:var(--rule);stroke-width:1}
-.edge{fill:none;stroke:var(--ink);stroke-linecap:butt;stroke-opacity:.5;transition:stroke-dashoffset .6s ease,opacity .5s}
-.edge.dash{stroke:var(--mustard);stroke-opacity:.95;stroke-dasharray:7 6;opacity:0}
-.edge.dash.on{opacity:1}
-.flow{fill:none;stroke:var(--red);stroke-linecap:round;stroke-dasharray:1 12;opacity:0;transition:opacity .5s}
-.flow.on{opacity:1;animation:flow 1.6s linear infinite}
-@keyframes flow{to{stroke-dashoffset:-26}}
-.elabel{fill:var(--muted);font:400 11px var(--mono);text-anchor:middle;paint-order:stroke;stroke:var(--paper);stroke-width:5px;stroke-linejoin:round;opacity:0;transition:opacity .5s}
-.elabel.sm{font-size:9.5px;fill:var(--mustard)}
-.elabel.on{opacity:1}
-.node{opacity:0;transition:opacity .35s;pointer-events:none}
-.node.on{opacity:1;pointer-events:auto;cursor:pointer}
-.node:focus-visible{outline:none}
-.node:focus-visible .halo{opacity:1}
-.node .shape{transform:scale(.2);transform-origin:0 0;transition:transform .45s cubic-bezier(.2,1.6,.4,1)}
-.node.on .shape{transform:scale(1)}
-.node .bs{stroke:var(--paper);stroke-width:3;paint-order:stroke;transition:fill .6s}
-.node .b-reported{fill:var(--red)}
-.node .b-burner{fill:var(--ink)}
-.node .b-mixer,.node .b-bridge{fill:var(--mustard)}
-.node .b-deposit,.node .b-hotwallet{fill:var(--green)}
-.node .b-victim{fill:var(--paper);stroke:var(--ink);stroke-width:2;paint-order:normal}
-.node .b-fiat{fill:var(--paper-2);stroke:var(--ink);stroke-width:1.5;paint-order:normal}
-.tag{fill:var(--ink);font:500 11.5px var(--mono);text-anchor:middle}
-.adr{fill:var(--muted);font:400 9.5px var(--mono);text-anchor:middle}
-.fiat-t{fill:var(--ink);font:500 11px var(--mono);text-anchor:middle}
-.rk{font:700 13px var(--mono);text-anchor:middle;opacity:0;transition:opacity .6s}
-.scored .rk{opacity:1}
-.halo{fill:none;stroke:var(--ink);stroke-width:1.6;stroke-dasharray:3 3;opacity:0}
-.node.sel .halo{opacity:1}
-.pulse,.ring{fill:none;stroke-width:2;opacity:0;transform-origin:0 0}
-.pulse{stroke:var(--red)}
-.ring{stroke:var(--green);stroke-width:2.5}
-.node.on .pulse{animation:pulse 2s ease-out infinite}
-.ring.on{animation:pulse 1.8s ease-out infinite}
-@keyframes pulse{0%{transform:scale(1);opacity:.9}100%{transform:scale(2.8);opacity:0}}
-.ink{fill:none;stroke:var(--red);stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;opacity:0;transition:stroke-dashoffset 1.1s ease}
-.ink.on{stroke-dashoffset:0;opacity:1}
-.hand{font:700 24px var(--hand);text-anchor:middle;fill:var(--red);opacity:0;transition:opacity .6s .5s}
-.hand.g{fill:var(--green)}
-.hand.on{opacity:1}
-.instant *{transition:none!important}
-@media (prefers-reduced-motion: reduce){.flow.on,.node.on .pulse,.ring.on{animation:none}}
 h2{font:500 12px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--red);margin:0 0 14px}
 .gcard li::marker{color:var(--red)}
 .team-list{list-style:none;margin:18px 0 0;padding:16px 0 0;border-top:1px solid var(--rule);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 28px;font-size:15px}
@@ -222,7 +143,6 @@ h2{font:500 12px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:
 <nav class="nav">
   <a class="wm mark" href="/"><span class="d">$</span>Tracer<em>AI</em></a>
   <div class="links"><a href="/">How it works</a><a href="/app">Live tool</a><a href="/about" class="on">About</a></div>
-  
 </nav>
 
 <main class="wrap">

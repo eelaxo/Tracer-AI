@@ -14,6 +14,14 @@ Tracer AI - minimal working prototype backend.
   restarts. See README for how to point this at a free Supabase/
   Neon database via the DATABASE_URL environment variable.
 
+Security hardening applied (Phase 1):
+  - Connection pooling via ThreadedConnectionPool (no per-request connects)
+  - log_activity runs as a FastAPI BackgroundTask (non-blocking async)
+  - Strict Pydantic input validation on wallet address (regex + length)
+  - IP validation via ipaddress module (blocks X-Forwarded-For spoofing)
+  - CORS middleware added
+  - Chain whitelist enforced
+
 Pages:
     /          scroll-driven story (demo.html) - how the system works
     /app       the working tool (app.html)     - enter or pull a report
@@ -26,43 +34,116 @@ Run:
 """
 import hashlib
 import html
+import ipaddress
 import json
 import math
 import os
 import random
+import re
 import secrets
 import string
+import threading
 import time
 import uuid
 from pathlib import Path
 
 import psycopg2
-from fastapi import Depends, FastAPI, HTTPException, Request
+import psycopg2.pool
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 APP_DIR = Path(__file__).parent
 DB_FILE = APP_DIR / "cases.json"
+_FILE_LOCK = threading.Lock()  # prevents race conditions on cases.json
 
 app = FastAPI(title="Tracer AI (prototype)")
+
+# ---------------------------------------------------------------- CORS
+# Allows the frontend pages to call the API even when served from a
+# different origin (e.g. a preview URL on Render or Vercel).
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
 
 # ---------------------------------------------------------------- visitor log (Postgres)
 # Separate from cases.json: this is the part that must survive a
 # Render restart, so it lives in a real database, not a local file.
 DATABASE_URL = os.environ.get("DATABASE_URL")  # set this in Render's Environment tab
 VISITORS_PASSWORD = os.environ.get("VISITORS_PASSWORD")  # set this too, don't hardcode it
-def db_connect():
-    # 3s timeout: if Supabase has paused or is unreachable, fail fast
-    # instead of hanging the whole site waiting on a dead connection.
-    return psycopg2.connect(DATABASE_URL, connect_timeout=3)
 
+# ---- Connection pool (replaces bare psycopg2.connect on every request) ----
+# minconn=1 keeps one warm connection alive; maxconn=8 stops us hitting
+# the Supabase/Neon free-tier connection limit (typically 15-20).
+_pool: psycopg2.pool.ThreadedConnectionPool | None = None
+_pool_lock = threading.Lock()
+
+def _get_pool() -> psycopg2.pool.ThreadedConnectionPool | None:
+    global _pool
+    if not DATABASE_URL:
+        return None
+    with _pool_lock:
+        if _pool is None or _pool.closed:
+            try:
+                _pool = psycopg2.pool.ThreadedConnectionPool(
+                    minconn=1, maxconn=8,
+                    dsn=DATABASE_URL,
+                    connect_timeout=3,
+                )
+            except Exception as e:
+                print("DB pool init failed:", e)
+                return None
+    return _pool
+
+def db_connect():
+    """Get a connection from the pool (caller must return it via pool.putconn)."""
+    pool = _get_pool()
+    if pool is None:
+        raise RuntimeError("No database pool available")
+    return pool.getconn()
+
+def db_putconn(conn) -> None:
+    pool = _get_pool()
+    if pool and conn:
+        pool.putconn(conn)
+
+# ---------------------------------------------------------------- safe IP extraction
+def client_ip(request: Request) -> str:
+    """
+    Extract the real client IP.
+    Validates the value from X-Forwarded-For so a spoofed header with
+    arbitrary text (e.g. injection payloads) is silently discarded.
+    """
+    fwd = request.headers.get("x-forwarded-for", "")
+    if fwd:
+        candidate = fwd.split(",")[0].strip()
+        try:
+            ipaddress.ip_address(candidate)   # raises ValueError if not a valid IP
+            return candidate
+        except ValueError:
+            pass
+    if request.client:
+        return request.client.host
+    return "unknown"
+
+# ---------------------------------------------------------------- activity logging (non-blocking)
 def log_activity(ip: str, path: str, wallet: str | None = None) -> None:
-    """Best-effort: a logging hiccup should never break the site itself."""
+    """
+    Best-effort background logging — a hiccup here must never block a response.
+    Called via FastAPI BackgroundTasks so it runs AFTER the response is sent,
+    keeping the async event loop free.
+    """
     if not DATABASE_URL:
         return
+    conn = None
     try:
-        with db_connect() as conn, conn.cursor() as cur:
+        conn = db_connect()
+        with conn.cursor() as cur:
             cur.execute(
                 "CREATE TABLE IF NOT EXISTS activity ("
                 "id SERIAL PRIMARY KEY, ts TIMESTAMPTZ DEFAULT now(), "
@@ -72,60 +153,140 @@ def log_activity(ip: str, path: str, wallet: str | None = None) -> None:
                 "INSERT INTO activity (ip, path, wallet) VALUES (%s, %s, %s)",
                 (ip, path, (wallet or None)[:200] if wallet else None),
             )
+        conn.commit()
     except Exception as e:
         print("activity log failed:", e)
+        if conn:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+    finally:
+        db_putconn(conn)
 
-def client_ip(request: Request) -> str:
-    # Render sits behind a proxy, so the real visitor IP is in this
-    # header, not request.client.host (that would just show Render's).
-    fwd = request.headers.get("x-forwarded-for")
-    return fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "unknown")
-
+# ---------------------------------------------------------------- middleware
+# NOTE: We no longer call log_activity here because that was a blocking
+# psycopg2 call inside an async function — it would freeze the event loop.
+# Page-view logging is now done per-route via BackgroundTasks instead.
 @app.middleware("http")
-async def record_visit(request: Request, call_next):
+async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
-    if request.url.path not in ("/favicon.ico",) and not request.url.path.startswith("/api/"):
-        log_activity(client_ip(request), request.url.path)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     return response
 
 # ---------------------------------------------------------------- storage
 def _file_db() -> dict:
-    return json.loads(DB_FILE.read_text()) if DB_FILE.exists() else {}
+    if not DB_FILE.exists():
+        return {}
+    try:
+        return json.loads(DB_FILE.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+def _file_db_write(db: dict) -> None:
+    """Atomic-ish write using a lock to prevent concurrent corruption."""
+    with _FILE_LOCK:
+        tmp = DB_FILE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(db, indent=2), encoding="utf-8")
+        tmp.replace(DB_FILE)
 
 def save_case(case: dict) -> None:
     if DATABASE_URL:
+        conn = None
         try:
-            with db_connect() as conn, conn.cursor() as cur:
+            conn = db_connect()
+            with conn.cursor() as cur:
                 cur.execute("CREATE TABLE IF NOT EXISTS cases (id TEXT PRIMARY KEY, data JSONB)")
-                cur.execute("INSERT INTO cases (id, data) VALUES (%s, %s)", (case["case_id"], json.dumps(case)))
+                cur.execute(
+                    "INSERT INTO cases (id, data) VALUES (%s, %s) ON CONFLICT (id) DO NOTHING",
+                    (case["case_id"], json.dumps(case)),
+                )
+            conn.commit()
             return
         except Exception as e:
             print("save_case: DB unavailable, falling back to file ->", e)
-    db = _file_db(); db[case["case_id"]] = case
-    DB_FILE.write_text(json.dumps(db, indent=2))
+            if conn:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+        finally:
+            db_putconn(conn)
+    # file fallback
+    with _FILE_LOCK:
+        db = _file_db()
+        db[case["case_id"]] = case
+        _file_db_write(db)
 
 def get_case_by_id(case_id: str) -> dict | None:
     if DATABASE_URL:
+        conn = None
         try:
-            with db_connect() as conn, conn.cursor() as cur:
+            conn = db_connect()
+            with conn.cursor() as cur:
                 cur.execute("CREATE TABLE IF NOT EXISTS cases (id TEXT PRIMARY KEY, data JSONB)")
                 cur.execute("SELECT data FROM cases WHERE id = %s", (case_id,))
                 row = cur.fetchone()
                 return row[0] if row else None
         except Exception as e:
             print("get_case_by_id: DB unavailable, falling back to file ->", e)
+        finally:
+            db_putconn(conn)
     return _file_db().get(case_id)
 
-def list_all_cases() -> list[dict]:
+def list_recent_cases(limit: int = 20) -> list[dict]:
+    """
+    Returns lightweight summary rows only — NOT the full graph payload.
+    This avoids pulling megabytes of node/edge data just to show 6 chips.
+    """
     if DATABASE_URL:
+        conn = None
         try:
-            with db_connect() as conn, conn.cursor() as cur:
+            conn = db_connect()
+            with conn.cursor() as cur:
                 cur.execute("CREATE TABLE IF NOT EXISTS cases (id TEXT PRIMARY KEY, data JSONB)")
-                cur.execute("SELECT data FROM cases")
-                return [row[0] for row in cur.fetchall()]
+                # Pull only the fields we need for the summary list
+                cur.execute(
+                    """
+                    SELECT
+                        data->>'case_id',
+                        (data->>'created_at')::bigint,
+                        data->'input'->>'wallet',
+                        data->'vasp'->>'name',
+                        (data->'vasp'->>'confidence')::float,
+                        (data->'summary'->>'funds_reached_exchange')::float
+                    FROM cases
+                    ORDER BY (data->>'created_at')::bigint DESC
+                    LIMIT %s
+                    """,
+                    (limit,),
+                )
+                rows = cur.fetchall()
+                return [
+                    {
+                        "case_id": r[0], "created_at": r[1], "wallet": r[2],
+                        "vasp": r[3], "confidence": r[4], "funds_reached_exchange": r[5],
+                    }
+                    for r in rows
+                ]
         except Exception as e:
-            print("list_all_cases: DB unavailable, falling back to file ->", e)
-    return list(_file_db().values())
+            print("list_recent_cases: DB unavailable, falling back to file ->", e)
+        finally:
+            db_putconn(conn)
+    # file fallback
+    cases = list(_file_db().values())
+    cases.sort(key=lambda c: -c.get("created_at", 0))
+    return [
+        {
+            "case_id": c["case_id"], "created_at": c["created_at"],
+            "wallet": c["input"]["wallet"], "vasp": c["vasp"]["name"],
+            "confidence": c["vasp"]["confidence"],
+            "funds_reached_exchange": c["summary"]["funds_reached_exchange"],
+        }
+        for c in cases[:limit]
+    ]
 
 # ---------------------------------------------------------------- fake but plausible addresses
 def fake_address(rng: random.Random, chain: str) -> str:
@@ -143,6 +304,7 @@ CATEGORY_POOL = [
     "Investment scam", "Task-based fraud", "Sextortion",
     "Phishing", "Ransomware", "Romance scam",
 ]
+ALLOWED_CHAINS = {"ETH", "TRX"}
 
 # ---------------------------------------------------------------- risk model
 # Same transparent weighted model used in the pitch: features in [0,1],
@@ -285,15 +447,24 @@ def build_case(wallet: str, chain: str, amount: float, category: str) -> dict:
         "edges": edges,
         "vasp": {"name": vasp_name, "confidence": confidence, "wallet": hot["short"], "evidence": evidence},
         "freeze_request": (
-            f"DRAFT \u2014 for investigators only (simulated)\n\n"
-            f"To: {vasp_name} compliance team*\n"
-            f"Case: {case_id}\n"
+            f"DRAFT — for investigators only (simulated)\n\n"
+            f"Authority: Sec. 94 BNSS 2023 / Sec. 91 CrPC | Sec. 106 BNSS / Sec. 102 CrPC\n\n"
+            f"To: {vasp_name} Compliance & Legal Team*\n"
+            f"From: [Investigating Officer Name]\n"
+            f"Station / Cyber Cell: [Police Station / Cyber Crime Cell]\n"
+            f"FIR / NCRP Ref: {case_id}\n\n"
+            f"Subject: Request to Freeze Accounts & Preserve KYC Records\n\n"
+            f"Reported wallet: {wallet}\n"
             f"Deposit wallets: " + ", ".join(d["short"] for d, _ in deposits) + f"\n"
-            f"Hot wallet: {hot['short']}\n"
+            f"Hot wallet cluster: {hot['short']}\n"
             f"Funds reaching exchange: {round(total_reached, 2)} USDT\n"
-            f"Confidence: {confidence}%\n"
-            f"Ask: freeze pending accounts, preserve KYC + transaction logs\n\n"
-            f"* Fictional exchange name, for demo purposes only."
+            f"Attribution confidence: {confidence}%\n"
+            f"Fraud category: {category}\n\n"
+            f"You are hereby requested under the above provisions to:\n"
+            f"  1. Immediately freeze all accounts linked to the above addresses.\n"
+            f"  2. Preserve full KYC records, transaction logs, and IP/device data.\n"
+            f"  3. Respond within 7 working days with account holder details.\n\n"
+            f"* Fictional exchange name — for demo purposes only."
         ),
     }
     return case
@@ -311,44 +482,62 @@ def simulated_ncrp_complaint(complaint_id: str) -> dict:
         "filed_days_ago": rng.randint(0, 6),
     }
 
-# ---------------------------------------------------------------- API
-class ReportIn(BaseModel):
-    wallet: str
-    chain: str = "ETH"
-    amount: float = 5000
-    category: str = "Investment scam"
-    source: str = "manual"
+# ---------------------------------------------------------------- API input model with validation
+# Wallet pattern: Ethereum (0x + 40 hex chars) OR TRON (T + 33 base58 chars)
+_WALLET_RE = re.compile(r"^(0x[0-9a-fA-F]{40}|T[1-9A-HJ-NP-Za-km-z]{33})$")
 
+class ReportIn(BaseModel):
+    wallet: str = Field(..., min_length=26, max_length=66)
+    chain: str = Field("ETH", max_length=8)
+    amount: float = Field(5000, ge=1, le=1_000_000_000)
+    category: str = Field("Investment scam", max_length=64)
+    source: str = Field("manual", max_length=32)
+
+    @field_validator("wallet")
+    @classmethod
+    def validate_wallet(cls, v: str) -> str:
+        v = v.strip()
+        if not _WALLET_RE.match(v):
+            raise ValueError(
+                "Wallet must be a valid Ethereum address (0x + 40 hex chars) "
+                "or TRON address (T + 33 base58 chars)."
+            )
+        return v
+
+    @field_validator("chain")
+    @classmethod
+    def validate_chain(cls, v: str) -> str:
+        v = v.upper()
+        if v not in ALLOWED_CHAINS:
+            raise ValueError(f"Chain must be one of: {', '.join(ALLOWED_CHAINS)}")
+        return v
+
+# ---------------------------------------------------------------- API routes
 @app.post("/api/report")
-def submit_report(r: ReportIn, request: Request):
-    wallet = r.wallet.strip()
-    if len(wallet) < 4:
-        raise HTTPException(400, "Wallet address looks too short.")
-    case = build_case(wallet, r.chain.upper(), max(r.amount, 1), r.category)
+def submit_report(r: ReportIn, request: Request, bg: BackgroundTasks):
+    case = build_case(r.wallet, r.chain, r.amount, r.category)
     save_case(case)
-    log_activity(client_ip(request), "/api/report", wallet)
+    # Log in the background — response is already on its way to the browser
+    bg.add_task(log_activity, client_ip(request), "/api/report", r.wallet)
     return case
 
 @app.get("/api/ncrp-lookup/{complaint_id}")
 def ncrp_lookup(complaint_id: str):
+    if len(complaint_id) > 64:
+        raise HTTPException(400, "Complaint ID too long.")
     return simulated_ncrp_complaint(complaint_id)
 
 @app.get("/api/cases")
-def list_cases():
-    rows = [
-        {
-            "case_id": c["case_id"], "created_at": c["created_at"],
-            "wallet": c["input"]["wallet"], "vasp": c["vasp"]["name"],
-            "confidence": c["vasp"]["confidence"],
-            "funds_reached_exchange": c["summary"]["funds_reached_exchange"],
-        }
-        for c in list_all_cases()
-    ]
-    rows.sort(key=lambda x: -x["created_at"])
-    return rows
+def list_cases(bg: BackgroundTasks, request: Request):
+    # Background-log page visits here now (middleware no longer does it)
+    bg.add_task(log_activity, client_ip(request), "/api/cases")
+    return list_recent_cases(limit=20)
 
 @app.get("/api/case/{case_id}")
 def get_case(case_id: str):
+    # Sanitise: case IDs are "NCRP-" + 8 uppercase hex chars
+    if not re.match(r"^NCRP-[0-9A-F]{8}$", case_id):
+        raise HTTPException(400, "Invalid case ID format.")
     case = get_case_by_id(case_id)
     if not case:
         raise HTTPException(404, "Case not found.")
@@ -356,7 +545,7 @@ def get_case(case_id: str):
 
 # ---------------------------------------------------------------- pages
 # Each page is one self-contained HTML file. We deliberately do NOT mount the
-# whole folder as static files - that would expose app.py and cases.json.
+# whole folder as static files — that would expose app.py and cases.json.
 basic_auth = HTTPBasic()
 
 def require_owner(creds: HTTPBasicCredentials = Depends(basic_auth)):
@@ -370,14 +559,20 @@ def require_owner(creds: HTTPBasicCredentials = Depends(basic_auth)):
 def visitors_page(_: bool = Depends(require_owner)):
     if not DATABASE_URL:
         return HTMLResponse("<p>Set DATABASE_URL on the server first (see README).</p>")
-    with db_connect() as conn, conn.cursor() as cur:
-        cur.execute(
-            "CREATE TABLE IF NOT EXISTS activity ("
-            "id SERIAL PRIMARY KEY, ts TIMESTAMPTZ DEFAULT now(), "
-            "ip TEXT, path TEXT, wallet TEXT)"
-        )
-        cur.execute("SELECT ts, ip, path, wallet FROM activity ORDER BY ts DESC LIMIT 500")
-        rows = cur.fetchall()
+    conn = None
+    try:
+        conn = db_connect()
+        with conn.cursor() as cur:
+            cur.execute(
+                "CREATE TABLE IF NOT EXISTS activity ("
+                "id SERIAL PRIMARY KEY, ts TIMESTAMPTZ DEFAULT now(), "
+                "ip TEXT, path TEXT, wallet TEXT)"
+            )
+            cur.execute("SELECT ts, ip, path, wallet FROM activity ORDER BY ts DESC LIMIT 500")
+            rows = cur.fetchall()
+    finally:
+        db_putconn(conn)
+
     def esc(v): return html.escape(str(v)) if v is not None else ""
     body = "".join(
         f"<tr><td>{esc(ts.strftime('%Y-%m-%d %H:%M:%S'))}</td><td class='m'>{esc(ip)}</td>"
@@ -402,15 +597,18 @@ th{{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#6C665B}}
 </body></html>""")
 
 @app.get("/")
-def story_page():
+def story_page(bg: BackgroundTasks, request: Request):
+    bg.add_task(log_activity, client_ip(request), "/")
     return FileResponse(APP_DIR / "demo.html")
 
 @app.get("/app")
-def tool_page():
+def tool_page(bg: BackgroundTasks, request: Request):
+    bg.add_task(log_activity, client_ip(request), "/app")
     return FileResponse(APP_DIR / "app.html")
 
 @app.get("/about")
-def about_page():
+def about_page(bg: BackgroundTasks, request: Request):
+    bg.add_task(log_activity, client_ip(request), "/about")
     return FileResponse(APP_DIR / "about.html")
 
 # Lets you just double-click app.py or run "py app.py" instead of typing

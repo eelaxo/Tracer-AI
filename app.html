@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>$Tracer AI – live tool</title>
+<meta name="description" content="$Tracer AI – blockchain forensics tool for tracing crypto fraud wallets.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
@@ -47,8 +48,25 @@ a{color:inherit}
 .links a:hover{color:var(--red)}
 .links a.on{color:var(--ink);border-bottom-color:var(--red)}
 .status{margin-left:auto;font:500 11.5px var(--mono);letter-spacing:.06em;color:var(--muted)}
+/* ---------- theme toggle ---------- */
+.theme-btn{background:none;border:1px solid var(--rule);color:var(--muted);cursor:pointer;font-size:16px;padding:4px 8px;border-radius:4px;line-height:1;transition:border-color .2s,color .2s}
+.theme-btn:hover{border-color:var(--red);color:var(--red)}
 .status.ok::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:8px}
 .status.bad{color:var(--red)}
+/* ---------- theme toggle button ---------- */
+.theme-btn{background:none;border:1px solid var(--rule);color:var(--muted);cursor:pointer;font-size:16px;padding:4px 9px;border-radius:4px;line-height:1;transition:border-color .2s,color .2s;margin-left:8px}
+.theme-btn:hover{border-color:var(--red);color:var(--red)}
+/* ---------- pan/zoom controls ---------- */
+.gcontrols{display:flex;gap:6px;padding:6px 10px;justify-content:flex-end;border-bottom:1px solid var(--rule);background:var(--paper)}
+.gcontrols button{font:500 13px var(--mono);background:none;border:1px solid var(--rule);color:var(--muted);cursor:pointer;padding:3px 10px;border-radius:3px;line-height:1.4;transition:border-color .2s,color .2s}
+.gcontrols button:hover{border-color:var(--red);color:var(--red)}
+/* ---------- inspector actions ---------- */
+.iacts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.iacts a,.iacts button{font:500 10.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:none;border:1px solid var(--rule);border-radius:3px;padding:4px 10px;cursor:pointer;text-decoration:none;transition:border-color .2s,color .2s;line-height:1.5}
+.iacts a:hover,.iacts button:hover{border-color:var(--red);color:var(--red)}
+/* ---------- export bar ---------- */
+.export-bar{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--rule)}
+
 
 .wrap{max-width:1240px;margin:0 auto;padding:0 28px 60px}
 .intro{padding:44px 0 24px}
@@ -162,7 +180,17 @@ td.m{font:400 12px var(--mono)}
 .rb{display:inline-block;min-width:36px;text-align:center;font:500 12px var(--mono);color:#fff;padding:1px 7px}
 footer{max-width:1240px;margin:0 auto;padding:22px 28px 34px;font:400 12.5px var(--mono);color:var(--muted);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--rule)}
 
-/* ---------- graph ---------- */
+/* ---------- graph pan/zoom controls ---------- */
+.gcontrols{display:flex;gap:6px;padding:8px 10px 0;justify-content:flex-end}
+.gcontrols button{font:500 14px var(--mono);background:none;border:1px solid var(--rule);color:var(--muted);cursor:pointer;padding:3px 9px;border-radius:3px;line-height:1.4;transition:border-color .2s,color .2s}
+.gcontrols button:hover{border-color:var(--red);color:var(--red)}
+/* ---------- inspector copy / explorer ---------- */
+.iacts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.iacts a,.iacts button{font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:none;border:1px solid var(--rule);border-radius:3px;padding:4px 10px;cursor:pointer;text-decoration:none;transition:border-color .2s,color .2s;line-height:1.5}
+.iacts a:hover,.iacts button:hover{border-color:var(--red);color:var(--red)}
+/* ---------- export bar ---------- */
+.export-bar{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--rule)}
+.export-bar .btn.sm{display:flex;align-items:center;gap:6px}
 .colhead{fill:var(--muted);font:500 11px var(--mono);letter-spacing:.09em;text-transform:uppercase;text-anchor:middle;opacity:0;transition:opacity .4s}
 .colhead.on{opacity:1}
 .hr{stroke:var(--rule);stroke-width:1}
@@ -216,6 +244,7 @@ footer{max-width:1240px;margin:0 auto;padding:22px 28px 34px;font:400 12.5px var
   <a class="wm mark" href="/"><span class="d">$</span>Tracer<em>AI</em></a>
   <div class="links"><a href="/">How it works</a><a href="/app" class="on">Live tool</a><a href="/about">About</a></div>
   <span class="status" id="status">checking backend…</span>
+  <button class="theme-btn" id="themeBtn" title="Toggle dark / light mode" aria-label="Toggle dark/light mode">&#x1F319;</button>
 </nav>
 
 <main class="wrap">
@@ -271,7 +300,8 @@ footer{max-width:1240px;margin:0 auto;padding:22px 28px 34px;font:400 12.5px var
         <span><b>03</b>Name the exchange</span>
       </div>
       <div class="ginner">
-        <div class="gwrap"><svg id="g" viewBox="0 0 860 400" role="img" aria-label="Transaction graph from the victims, through the reported wallet and laundering hops, to the exchange"></svg></div>
+        <div class="gcontrols"><button id="zoomIn" title="Zoom in">+</button><button id="zoomOut" title="Zoom out">&minus;</button><button id="zoomReset" title="Reset view">&#x21BA; Reset</button></div>
+      <div class="gwrap" id="gwrap"><svg id="g" viewBox="0 0 860 400" role="img" aria-label="Transaction graph from the victims, through the reported wallet and laundering hops, to the exchange"></svg></div>
         <aside class="insp" id="insp"></aside>
       </div>
       <div class="legend">
@@ -290,6 +320,8 @@ footer{max-width:1240px;margin:0 auto;padding:22px 28px 34px;font:400 12.5px var
       <div class="paper" id="vasp"></div>
       <div class="paper r" id="freeze"></div>
     </div>
+
+    <div class="export-bar" id="exportBar" hidden><button class="btn sm" id="exportCsv" type="button">&#x21E9; Export CSV</button><button class="btn sm" id="printDocket" type="button">&#x1F5A8; Print / Save PDF</button></div>
 
     <details class="tbl">
       <summary id="tblSum">All wallets and AI scores</summary>
@@ -396,7 +428,8 @@ $('#form').addEventListener('submit', async (ev) => {
 /* ---------------------------------------------------------------- show a case */
 function showCase(c) {
   C = c; selId = null;
-  $('#result').hidden = false;                       // must be visible before we measure paths
+  $('#result').hidden = false;
+  var eb = document.getElementById('exportBar'); if (eb) eb.hidden = false;                       // must be visible before we measure paths
   $('#caseTitle').innerHTML = '<span>Case file</span>' + esc(c.case_id);
   const s = c.summary;
   $('#stats').innerHTML = [
@@ -576,6 +609,176 @@ function renderInsp(id) {
 }
 renderInsp(null);
 })();
+
+/* ================================================================
+ *  PHASE-1 ADDITIONS
+ * ================================================================ */
+
+/* --- Dark / Light theme toggle --- */
+(function () {
+  const btn = document.getElementById('themeBtn');
+  const html = document.documentElement;
+  function applyTheme(t) {
+    html.setAttribute('data-theme', t);
+    btn.textContent = t === 'dark' ? '\u2600\uFE0F' : '\uD83C\uDF19';
+    try { localStorage.setItem('tracer-theme', t); } catch(e) {}
+  }
+  // Restore saved preference
+  let saved;
+  try { saved = localStorage.getItem('tracer-theme'); } catch(e) {}
+  if (saved) applyTheme(saved);
+  btn.addEventListener('click', () => {
+    applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+  });
+})();
+
+/* --- Pan / Zoom on the graph SVG --- */
+(function () {
+  let scale = 1, tx = 0, ty = 0, dragging = false, startX, startY, startTx, startTy;
+  const gwrap = document.getElementById('gwrap');
+  const svgEl = document.getElementById('g');
+  if (!gwrap || !svgEl) return;
+
+  function applyTransform() {
+    svgEl.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`;
+    svgEl.style.transformOrigin = '0 0';
+  }
+  function clampScale(s) { return Math.min(3, Math.max(0.4, s)); }
+
+  document.getElementById('zoomIn').addEventListener('click', () => { scale = clampScale(scale * 1.25); applyTransform(); });
+  document.getElementById('zoomOut').addEventListener('click', () => { scale = clampScale(scale / 1.25); applyTransform(); });
+  document.getElementById('zoomReset').addEventListener('click', () => { scale = 1; tx = 0; ty = 0; applyTransform(); });
+
+  gwrap.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? 0.85 : 1.18;
+    scale = clampScale(scale * delta);
+    applyTransform();
+  }, { passive: false });
+
+  gwrap.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    dragging = true; startX = e.clientX; startY = e.clientY; startTx = tx; startTy = ty;
+    gwrap.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    tx = startTx + (e.clientX - startX);
+    ty = startTy + (e.clientY - startY);
+    applyTransform();
+  });
+  window.addEventListener('mouseup', () => { dragging = false; gwrap.style.cursor = ''; });
+})();
+
+/* --- Export CSV --- */
+document.getElementById('exportCsv').addEventListener('click', () => {
+  if (!C) return;
+  const rows = [['Wallet', 'Role', 'Chain', 'Risk Score', 'Top Signal', 'In (USDT)', 'Out (USDT)']];
+  const FEAT = { inflow: 'Receives from many victims', speed: 'Forwards money quickly', fanOut: 'Splits money', mixer: 'Touches a mixer', bridge: 'Cross-chain bridge', fresh: 'Brand-new wallet', split: 'Odd split amounts', service: 'Behaves like exchange deposit' };
+  C.nodes.forEach((n) => {
+    const inA = C.edges.filter(e => e.to === n.id).reduce((s, e) => s + e.amount, 0);
+    const outA = C.edges.filter(e => e.from === n.id).reduce((s, e) => s + e.amount, 0);
+    const rs = (n.reasons || n.top_reasons || []);
+    const top = rs[0] ? (FEAT[rs[0].feature] || rs[0].feature) : '';
+    rows.push([
+      n.address === 'fiat' ? 'off-chain (fiat)' : n.address,
+      n.label, n.chain,
+      n.risk !== undefined ? n.risk : '',
+      top,
+      inA ? inA.toFixed(2) : '',
+      outA ? outA.toFixed(2) : ''
+    ]);
+  });
+  const csv = rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = (C.case_id || 'tracer-case') + '-wallets.csv';
+  a.click();
+});
+
+/* --- Print / PDF docket --- */
+document.getElementById('printDocket').addEventListener('click', () => {
+  if (!C) return;
+  const s = C.summary, v = C.vasp;
+  const FEAT = { inflow: 'Receives from many victims', speed: 'Forwards money quickly', fanOut: 'Splits money', mixer: 'Touches a mixer', bridge: 'Cross-chain bridge', fresh: 'Brand-new wallet', split: 'Odd split amounts', service: 'Behaves like exchange deposit' };
+  const esc = (t) => String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const walletRows = C.nodes.filter(n => n.risk !== undefined).map(n => {
+    const rs = (n.reasons || n.top_reasons || []);
+    const top = rs[0] ? (FEAT[rs[0].feature] || rs[0].feature) : '—';
+    return `<tr><td>${esc(n.address === 'fiat' ? 'off-chain' : n.address)}</td><td>${esc(n.label)}</td><td>${esc(n.chain)}</td><td>${n.risk}</td><td>${esc(top)}</td></tr>`;
+  }).join('');
+  const win = window.open('', '_blank');
+  win.document.write(`<!doctype html><html><head><meta charset="utf-8">
+<title>Case Docket ${esc(C.case_id)}</title>
+<style>
+body{font:13px/1.5 Arial,sans-serif;color:#111;margin:32px;max-width:900px}
+h1{font-size:22px;border-bottom:2px solid #111;padding-bottom:6px;margin-bottom:4px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:#666;margin:20px 0 6px}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px}
+th,td{text-align:left;padding:5px 8px;border:1px solid #ccc}
+th{background:#f0f0f0;font-weight:600}
+pre{font:11px/1.6 Consolas,monospace;background:#f8f8f8;border:1px solid #ddd;padding:12px;white-space:pre-wrap}
+.badge{display:inline-block;background:#1B7A57;color:#fff;padding:1px 7px;font-size:11px;border-radius:3px}
+.footer{margin-top:32px;font-size:11px;color:#999;border-top:1px solid #ddd;padding-top:8px}
+@media print{body{margin:16px}}
+</style></head><body>
+<h1>&#36;Tracer AI — Case Docket</h1>
+<p><b>Case ID:</b> ${esc(C.case_id)} &nbsp;|&nbsp; <b>Generated:</b> ${new Date().toLocaleString('en-IN')} &nbsp;|&nbsp; <b>Prototype / Simulated</b></p>
+<h2>Complaint Details</h2>
+<table><tr><th>Reported Wallet</th><th>Chain</th><th>Category</th><th>Amount Reported</th></tr>
+<tr><td>${esc(C.input.wallet)}</td><td>${esc(C.input.chain)}</td><td>${esc(C.input.category)}</td><td>${Number(C.input.amount).toLocaleString('en-IN')} USDT</td></tr></table>
+<h2>Trace Summary</h2>
+<table><tr><th>Wallets Found</th><th>Hops</th><th>Chains</th><th>Funds Reported</th><th>Reached Exchange</th></tr>
+<tr><td>${s.wallets_found}</td><td>${s.hops}</td><td>${esc(s.chains.join(' + '))}</td><td>${Number(s.funds_reported).toLocaleString('en-IN')} USDT</td><td>${Number(s.funds_reached_exchange).toLocaleString('en-IN')} USDT</td></tr></table>
+<h2>Exchange Attribution</h2>
+<table><tr><th>Exchange (simulated)</th><th>Confidence</th><th>Hot Wallet</th></tr>
+<tr><td>${esc(v.name)}*</td><td><span class="badge">${v.confidence}%</span></td><td>${esc(v.wallet)}</td></tr></table>
+${v.evidence ? '<ul>' + v.evidence.map(e => '<li>' + esc(e) + '</li>').join('') + '</ul>' : ''}
+<h2>Wallet Risk Scores (AI Scored)</h2>
+<table><tr><th>Address</th><th>Role</th><th>Chain</th><th>Risk</th><th>Top Signal</th></tr>${walletRows}</table>
+<h2>Freeze Request Draft</h2>
+<pre>${esc(C.freeze_request)}</pre>
+<div class="footer">* Fictional exchange name for demo purposes only. &nbsp;|&nbsp; Stratagem Crew &middot; Team ID 176962 &middot; Smart India Hackathon 2026</div>
+</body></html>`);
+  win.document.close();
+  win.print();
+});
+
+/* --- Show export bar when a case is loaded; wire inspector copy + explorer links --- */
+const _origShowCase = showCase;
+// We patch renderInsp to inject copy + explorer buttons
+const _origRenderInsp = renderInsp;
+function renderInsp(id) {
+  _origRenderInsp(id);
+  if (!id || !R || !R.nodes[id]) return;
+  const n = R.nodes[id].n;
+  const addr = n.address === 'fiat' ? null : n.address;
+  if (!addr) return;
+  const box = document.getElementById('insp');
+  const acts = document.createElement('div');
+  acts.className = 'iacts';
+  // Copy address button
+  const copyBtn = document.createElement('button');
+  copyBtn.textContent = 'Copy Address';
+  copyBtn.onclick = () => {
+    navigator.clipboard.writeText(addr);
+    copyBtn.textContent = 'Copied!';
+    setTimeout(() => { copyBtn.textContent = 'Copy Address'; }, 1400);
+  };
+  acts.appendChild(copyBtn);
+  // Explorer link
+  const explorerUrl = n.chain === 'TRX'
+    ? 'https://tronscan.org/#/address/' + addr
+    : 'https://etherscan.io/address/' + addr;
+  const link = document.createElement('a');
+  link.href = explorerUrl;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.textContent = n.chain === 'TRX' ? 'View on Tronscan \u2197' : 'View on Etherscan \u2197';
+  acts.appendChild(link);
+  box.appendChild(acts);
+}
+
 </script>
 </body>
 </html>
