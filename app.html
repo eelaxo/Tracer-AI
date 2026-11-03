@@ -3,6 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+(()=>{const d=document.documentElement,K='tracer-theme';let t;try{t=localStorage.getItem(K)}catch(e){}
+d.dataset.theme=t==='light'||t==='dark'?t:matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('themeBtn'),u=()=>b.textContent=d.dataset.theme==='dark'?'\u2600\uFE0F':'\uD83C\uDF19';u();
+b.onclick=()=>{d.dataset.theme=d.dataset.theme==='dark'?'light':'dark';try{localStorage.setItem(K,d.dataset.theme)}catch(e){}u();dispatchEvent(new Event('themechange'))}})})();
+</script>
 <title>$Tracer AI – live tool</title>
 <meta name="description" content="$Tracer AI – blockchain forensics tool for tracing crypto fraud wallets.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -48,9 +54,6 @@ a{color:inherit}
 .links a:hover{color:var(--red)}
 .links a.on{color:var(--ink);border-bottom-color:var(--red)}
 .status{margin-left:auto;font:500 11.5px var(--mono);letter-spacing:.06em;color:var(--muted)}
-/* ---------- theme toggle ---------- */
-.theme-btn{background:none;border:1px solid var(--rule);color:var(--muted);cursor:pointer;font-size:16px;padding:4px 8px;border-radius:4px;line-height:1;transition:border-color .2s,color .2s}
-.theme-btn:hover{border-color:var(--red);color:var(--red)}
 .status.ok::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:8px}
 .status.bad{color:var(--red)}
 /* ---------- theme toggle button ---------- */
@@ -60,6 +63,7 @@ a{color:inherit}
 .gcontrols{display:flex;gap:6px;padding:6px 10px;justify-content:flex-end;border-bottom:1px solid var(--rule);background:var(--paper)}
 .gcontrols button{font:500 13px var(--mono);background:none;border:1px solid var(--rule);color:var(--muted);cursor:pointer;padding:3px 10px;border-radius:3px;line-height:1.4;transition:border-color .2s,color .2s}
 .gcontrols button:hover{border-color:var(--red);color:var(--red)}
+.ghint{margin-right:auto;align-self:center;font:400 11.5px var(--mono);color:var(--muted)}
 /* ---------- inspector actions ---------- */
 .iacts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .iacts a,.iacts button{font:500 10.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:none;border:1px solid var(--rule);border-radius:3px;padding:4px 10px;cursor:pointer;text-decoration:none;transition:border-color .2s,color .2s;line-height:1.5}
@@ -127,8 +131,8 @@ h1{font:400 clamp(46px,7vw,86px)/.95 var(--serif);letter-spacing:-.02em;margin:0
 .stepper span.on{color:var(--ink);border-bottom-color:var(--red);background:var(--paper-2)}
 .ginner{display:grid;grid-template-columns:minmax(0,1fr) 300px}
 @media (max-width:1000px){.ginner{grid-template-columns:minmax(0,1fr)}}
-.gwrap{overflow-x:auto;padding:8px 6px 4px}
-.gwrap svg{display:block;width:100%;min-width:700px;height:auto;overflow:visible}
+.gwrap{position:relative;overflow:hidden;padding:8px 6px 4px;touch-action:pan-y;cursor:grab;-webkit-user-select:none;user-select:none}
+.gwrap svg{display:block;width:100%;min-width:700px;height:auto;overflow:visible;transform-origin:0 0}
 .insp{border-left:1px solid var(--rule);padding:18px 20px;background:var(--paper-2);min-height:300px}
 @media (max-width:1000px){.insp{border-left:0;border-top:1px solid var(--rule);min-height:0}}
 .ih{font:500 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
@@ -180,16 +184,6 @@ td.m{font:400 12px var(--mono)}
 .rb{display:inline-block;min-width:36px;text-align:center;font:500 12px var(--mono);color:#fff;padding:1px 7px}
 footer{max-width:1240px;margin:0 auto;padding:22px 28px 34px;font:400 12.5px var(--mono);color:var(--muted);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid var(--rule)}
 
-/* ---------- graph pan/zoom controls ---------- */
-.gcontrols{display:flex;gap:6px;padding:8px 10px 0;justify-content:flex-end}
-.gcontrols button{font:500 14px var(--mono);background:none;border:1px solid var(--rule);color:var(--muted);cursor:pointer;padding:3px 9px;border-radius:3px;line-height:1.4;transition:border-color .2s,color .2s}
-.gcontrols button:hover{border-color:var(--red);color:var(--red)}
-/* ---------- inspector copy / explorer ---------- */
-.iacts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-.iacts a,.iacts button{font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:none;border:1px solid var(--rule);border-radius:3px;padding:4px 10px;cursor:pointer;text-decoration:none;transition:border-color .2s,color .2s;line-height:1.5}
-.iacts a:hover,.iacts button:hover{border-color:var(--red);color:var(--red)}
-/* ---------- export bar ---------- */
-.export-bar{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--rule)}
 .export-bar .btn.sm{display:flex;align-items:center;gap:6px}
 .colhead{fill:var(--muted);font:500 11px var(--mono);letter-spacing:.09em;text-transform:uppercase;text-anchor:middle;opacity:0;transition:opacity .4s}
 .colhead.on{opacity:1}
@@ -236,6 +230,29 @@ footer{max-width:1240px;margin:0 auto;padding:22px 28px 34px;font:400 12.5px var
 .hand.on{opacity:1}
 .instant *{transition:none!important}
 @media (prefers-reduced-motion: reduce){.flow.on,.node.on .pulse,.ring.on{animation:none}}
+/* ---------- mobile + touch ---------- */
+@media (max-width:640px){
+  .nav{flex-wrap:wrap;gap:4px 10px;padding:8px 14px}
+  .status{font-size:10.5px}
+  .links{order:3;flex-basis:100%}
+  .links a{flex:1;text-align:center}
+  .wrap{padding:0 16px 48px}
+  .intro{padding:28px 0 14px}
+  .fields{grid-template-columns:1fr;gap:16px}
+  .file{padding:20px 16px 14px}
+  .ncrp .f{flex:1 1 100%}
+  .stat b{font-size:26px}
+  .stepper span{flex-basis:100%;border-right:0;padding:8px 14px}
+  .insp{padding:16px}
+  .paper{padding:20px 16px 16px}
+  .acts{flex-wrap:wrap}
+  details.tbl{overflow-x:auto}
+  footer{padding:18px 16px 28px}
+}
+@media (pointer:coarse){
+  .btn,.tab,.chip,.chk,.theme-btn,.gcontrols button,.iacts a,.iacts button,.links a{min-height:44px;min-width:44px}
+  .chk,.links a{display:inline-flex;align-items:center}
+}
 </style>
 </head>
 <body>
@@ -299,8 +316,8 @@ footer{max-width:1240px;margin:0 auto;padding:22px 28px 34px;font:400 12.5px var
         <span><b>02</b>AI scores every wallet</span>
         <span><b>03</b>Name the exchange</span>
       </div>
+      <div class="gcontrols"><span class="ghint">scroll or pinch to zoom, drag to pan</span><button id="zoomIn" title="Zoom in" aria-label="Zoom in">+</button><button id="zoomOut" title="Zoom out" aria-label="Zoom out">&minus;</button><button id="zoomReset" title="Reset view">&#x21BA; Reset</button></div>
       <div class="ginner">
-        <div class="gcontrols"><button id="zoomIn" title="Zoom in">+</button><button id="zoomOut" title="Zoom out">&minus;</button><button id="zoomReset" title="Reset view">&#x21BA; Reset</button></div>
       <div class="gwrap" id="gwrap"><svg id="g" viewBox="0 0 860 400" role="img" aria-label="Transaction graph from the victims, through the reported wallet and laundering hops, to the exchange"></svg></div>
         <aside class="insp" id="insp"></aside>
       </div>
@@ -457,7 +474,7 @@ function showCase(c) {
     return '<tr><td class="m">' + esc(n.short) + '</td><td>' + esc(n.label) + '</td><td><span class="rb" style="background:' + heat(n.risk / 100) + '">' + n.risk + '</span></td><td>' + esc(top) + '</td></tr>';
   }).join('');
 
-  build(c); play();
+  build(c); resetView(); play();
   $('#result').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
 }
 
@@ -606,69 +623,65 @@ function renderInsp(id) {
   }
   h += '<div class="imeta">' + (inA ? '<span>in ' + fmt(inA) + '</span>' : '') + (outA ? '<span>out ' + fmt(outA) + ' USDT</span>' : '') + '</div>';
   box.innerHTML = h;
+  inspActions(id);
 }
 renderInsp(null);
-})();
 
 /* ================================================================
  *  PHASE-1 ADDITIONS
  * ================================================================ */
 
-/* --- Dark / Light theme toggle --- */
-(function () {
-  const btn = document.getElementById('themeBtn');
-  const html = document.documentElement;
-  function applyTheme(t) {
-    html.setAttribute('data-theme', t);
-    btn.textContent = t === 'dark' ? '\u2600\uFE0F' : '\uD83C\uDF19';
-    try { localStorage.setItem('tracer-theme', t); } catch(e) {}
-  }
-  // Restore saved preference
-  let saved;
-  try { saved = localStorage.getItem('tracer-theme'); } catch(e) {}
-  if (saved) applyTheme(saved);
-  btn.addEventListener('click', () => {
-    applyTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
-  });
-})();
+/* --- Pan / zoom: wheel, mouse drag, one-finger drag, two-finger pinch --- */
+let scale = 1, tx = 0, ty = 0;
+const gwrap = $('#gwrap'), svgEl = svg, ptrs = new Map();
+let moved = false, pd = 0, pm = null;
+const box = () => { const g = getComputedStyle(gwrap), v = getComputedStyle(svgEl); return { x: parseFloat(g.paddingLeft), y: parseFloat(g.paddingTop), w: parseFloat(v.width) * scale, h: parseFloat(v.height) * scale }; };
+function applyTransform() {
+  const W = gwrap.clientWidth, H = gwrap.clientHeight, b = box();
+  tx = Math.min(W * .75 - b.x, Math.max(tx, W * .25 - b.x - b.w));   // keep part of the graph on screen
+  ty = Math.min(H * .75 - b.y, Math.max(ty, H * .25 - b.y - b.h));
+  svgEl.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`;
+  gwrap.style.touchAction = scale > 1.01 ? 'none' : 'pan-y';   // zoomed: graph owns touch; fitted: vertical swipe still scrolls the page
+}
+function zoomAt(s, cx, cy) {
+  s = Math.min(4, Math.max(0.4, s));
+  const r = gwrap.getBoundingClientRect(), b = box(), px = cx - r.left - b.x, py = cy - r.top - b.y;
+  tx = px - (px - tx) * s / scale; ty = py - (py - ty) * s / scale; scale = s; applyTransform();
+}
+function resetView() { scale = 1; tx = 0; ty = 0; applyTransform(); }
+const zoomBtn = (k) => { const r = gwrap.getBoundingClientRect(); zoomAt(scale * k, r.left + r.width / 2, r.top + r.height / 2); };
+$('#zoomIn').addEventListener('click', () => zoomBtn(1.25));
+$('#zoomOut').addEventListener('click', () => zoomBtn(1 / 1.25));
+$('#zoomReset').addEventListener('click', resetView);
+gwrap.addEventListener('wheel', (e) => {
+  if (e.ctrlKey || e.metaKey) return;                           // leave browser zoom alone
+  e.preventDefault(); zoomAt(scale * (e.deltaY > 0 ? 0.85 : 1.18), e.clientX, e.clientY);
+}, { passive: false });
+const mid = () => { const p = [...ptrs.values()]; return { x: (p[0].x + p[1].x) / 2, y: (p[0].y + p[1].y) / 2, d: Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y) }; };
+gwrap.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY });
+  if (ptrs.size === 2) { const m = mid(); pm = m; pd = m.d; moved = true; }
+});
+gwrap.addEventListener('pointermove', (e) => {
+  const p = ptrs.get(e.pointerId); if (!p) return;
+  const dx = e.clientX - p.x, dy = e.pointerType === 'touch' && scale <= 1.01 ? 0 : e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
+  if (ptrs.size === 2) { const m = mid(); tx += m.x - pm.x; ty += m.y - pm.y; if (pd) zoomAt(scale * m.d / pd, m.x, m.y); else applyTransform(); pm = m; pd = m.d; return; }
+  if (!moved && Math.hypot(p.x - p.x0, p.y - p.y0) < 6) return;   // a tap stays a tap, so nodes remain clickable
+  if (!moved) { moved = true; gwrap.setPointerCapture(e.pointerId); gwrap.style.cursor = 'grabbing'; }
+  tx += dx; ty += dy; applyTransform();
+});
+const endPtr = (e) => { ptrs.delete(e.pointerId); if (!ptrs.size) { gwrap.style.cursor = ''; setTimeout(() => moved = false); } };
+gwrap.addEventListener('pointerup', endPtr); gwrap.addEventListener('pointercancel', endPtr);
+gwrap.addEventListener('click', (e) => { if (moved) e.stopPropagation(); }, true);
 
-/* --- Pan / Zoom on the graph SVG --- */
-(function () {
-  let scale = 1, tx = 0, ty = 0, dragging = false, startX, startY, startTx, startTy;
-  const gwrap = document.getElementById('gwrap');
-  const svgEl = document.getElementById('g');
-  if (!gwrap || !svgEl) return;
-
-  function applyTransform() {
-    svgEl.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`;
-    svgEl.style.transformOrigin = '0 0';
-  }
-  function clampScale(s) { return Math.min(3, Math.max(0.4, s)); }
-
-  document.getElementById('zoomIn').addEventListener('click', () => { scale = clampScale(scale * 1.25); applyTransform(); });
-  document.getElementById('zoomOut').addEventListener('click', () => { scale = clampScale(scale / 1.25); applyTransform(); });
-  document.getElementById('zoomReset').addEventListener('click', () => { scale = 1; tx = 0; ty = 0; applyTransform(); });
-
-  gwrap.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.85 : 1.18;
-    scale = clampScale(scale * delta);
-    applyTransform();
-  }, { passive: false });
-
-  gwrap.addEventListener('mousedown', (e) => {
-    if (e.button !== 0) return;
-    dragging = true; startX = e.clientX; startY = e.clientY; startTx = tx; startTy = ty;
-    gwrap.style.cursor = 'grabbing';
-  });
-  window.addEventListener('mousemove', (e) => {
-    if (!dragging) return;
-    tx = startTx + (e.clientX - startX);
-    ty = startTy + (e.clientY - startY);
-    applyTransform();
-  });
-  window.addEventListener('mouseup', () => { dragging = false; gwrap.style.cursor = ''; });
-})();
+/* heat colours are inline styles, so repaint them when the theme flips */
+addEventListener('themechange', () => {
+  if (!R) return; colors();
+  document.querySelectorAll('.rk').forEach((t) => t.style.fill = heat(t.textContent / 100));
+  document.querySelectorAll('.rb').forEach((b) => b.style.background = heat(b.textContent / 100));
+  if (selId) renderInsp(selId);
+});
 
 /* --- Export CSV --- */
 document.getElementById('exportCsv').addEventListener('click', () => {
@@ -745,11 +758,7 @@ ${v.evidence ? '<ul>' + v.evidence.map(e => '<li>' + esc(e) + '</li>').join('') 
 });
 
 /* --- Show export bar when a case is loaded; wire inspector copy + explorer links --- */
-const _origShowCase = showCase;
-// We patch renderInsp to inject copy + explorer buttons
-const _origRenderInsp = renderInsp;
-function renderInsp(id) {
-  _origRenderInsp(id);
+function inspActions(id) {
   if (!id || !R || !R.nodes[id]) return;
   const n = R.nodes[id].n;
   const addr = n.address === 'fiat' ? null : n.address;
@@ -778,7 +787,7 @@ function renderInsp(id) {
   acts.appendChild(link);
   box.appendChild(acts);
 }
-
+})();
 </script>
 </body>
 </html>

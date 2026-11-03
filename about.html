@@ -3,6 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+(()=>{const d=document.documentElement,K='tracer-theme';let t;try{t=localStorage.getItem(K)}catch(e){}
+d.dataset.theme=t==='light'||t==='dark'?t:matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('themeBtn'),u=()=>b.textContent=d.dataset.theme==='dark'?'\u2600\uFE0F':'\uD83C\uDF19';u();
+b.onclick=()=>{d.dataset.theme=d.dataset.theme==='dark'?'light':'dark';try{localStorage.setItem(K,d.dataset.theme)}catch(e){}u();dispatchEvent(new Event('themechange'))}})})();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
@@ -45,6 +51,8 @@ a{color:inherit}
 .links a{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent;padding:6px 8px}
 .links a:hover{color:var(--red)}
 .links a.on{color:var(--ink);border-bottom-color:var(--red)}
+.theme-btn{background:none;border:1px solid var(--rule);color:var(--muted);cursor:pointer;font-size:16px;padding:4px 9px;border-radius:4px;line-height:1;transition:border-color .2s,color .2s;margin-left:auto}
+.theme-btn:hover{border-color:var(--red);color:var(--red)}
 .status{margin-left:auto;font:500 11.5px var(--mono);letter-spacing:.06em;color:var(--muted)}
 .status.ok::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:8px}
 .status.bad{color:var(--red)}
@@ -133,6 +141,16 @@ h2{font:500 12px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:
 .gcard li::marker{color:var(--red)}
 .team-list{list-style:none;margin:18px 0 0;padding:16px 0 0;border-top:1px solid var(--rule);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 28px;font-size:15px}
 .team-list li{padding:6px 0}
+@media (max-width:640px){
+  .nav{flex-wrap:wrap;gap:4px 10px;padding:8px 14px}
+  .links{order:3;flex-basis:100%}
+  .links a{flex:1;text-align:center}
+  .wrap{padding:0 16px 48px}
+  .intro{padding:28px 0 14px}
+  main .gcard{padding:20px 18px!important}
+  footer{padding:18px 16px 28px}
+}
+@media (pointer:coarse){.theme-btn,.links a{min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center}}
 .team-list .role{display:inline-block;font:500 10px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--red);margin-right:9px}
 @media (max-width:560px){.team-list{grid-template-columns:1fr}}
 </style>
@@ -143,6 +161,7 @@ h2{font:500 12px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:
 <nav class="nav">
   <a class="wm mark" href="/"><span class="d">$</span>Tracer<em>AI</em></a>
   <div class="links"><a href="/">How it works</a><a href="/app">Live tool</a><a href="/about" class="on">About</a></div>
+  <button class="theme-btn" id="themeBtn" title="Toggle dark / light mode" aria-label="Toggle dark/light mode">&#x1F319;</button>
 </nav>
 
 <main class="wrap">
