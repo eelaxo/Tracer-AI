@@ -3,6 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>
+(()=>{const d=document.documentElement,K='tracer-theme';let t;try{t=localStorage.getItem(K)}catch(e){}
+d.dataset.theme=t==='light'||t==='dark'?t:matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+addEventListener('DOMContentLoaded',()=>{const b=document.getElementById('themeBtn'),u=()=>b.textContent=d.dataset.theme==='dark'?'\u2600\uFE0F':'\uD83C\uDF19';u();
+b.onclick=()=>{d.dataset.theme=d.dataset.theme==='dark'?'light':'dark';try{localStorage.setItem(K,d.dataset.theme)}catch(e){}u();dispatchEvent(new Event('themechange'))}})})();
+</script>
 <title>$Tracer AI – follow the stolen money</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -195,10 +201,19 @@ footer{padding:22px 7vw 34px;font:400 12.5px var(--mono);color:var(--muted);disp
 .topnav{display:flex;align-items:center;gap:26px;padding:12px 7vw;border-bottom:1px solid var(--rule)}
 .topnav .wm{font-size:23px;text-decoration:none}
 .tlinks{display:flex;gap:6px}
+.theme-btn{background:none;border:1px solid var(--rule);color:var(--muted);cursor:pointer;font-size:16px;padding:4px 9px;border-radius:4px;line-height:1;transition:border-color .2s,color .2s;margin-left:auto}
+.theme-btn:hover{border-color:var(--red);color:var(--red)}
 .tlinks a{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);text-decoration:none;border-bottom:2px solid transparent;padding:6px 8px}
 .tlinks a:hover{color:var(--red)}
 .tlinks a.on{color:var(--ink);border-bottom-color:var(--red)}
-@media (max-width:700px){.topnav{padding:10px 5vw;gap:14px}.tlinks{gap:2px}}
+@media (max-width:700px){
+  .topnav{padding:10px 5vw;gap:4px 10px;flex-wrap:wrap}
+  .tlinks{gap:2px;order:3;flex-basis:100%}
+  .tlinks a{flex:1;text-align:center;white-space:nowrap}
+  .go{margin-bottom:12px}
+  .go+.go{margin-left:0!important}
+}
+@media (pointer:coarse){.theme-btn,.tlinks a,.go{min-height:44px;min-width:44px}.theme-btn,.tlinks a{display:inline-flex;align-items:center;justify-content:center}}
 ::-webkit-scrollbar{width:11px;height:11px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--red);border:3px solid var(--paper);border-radius:7px}
@@ -215,6 +230,7 @@ html{scrollbar-color:var(--red) transparent;scrollbar-width:thin}
 <nav class="topnav">
   <a class="wm mark" href="/"><span class="d">$</span>Tracer<em>AI</em></a>
   <div class="tlinks"><a href="/" class="on">How it works</a><a href="/app">Live tool</a><a href="/about">About</a></div>
+  <button class="theme-btn" id="themeBtn" title="Toggle dark / light mode" aria-label="Toggle dark/light mode">&#x1F319;</button>
 </nav>
 <header class="hero" id="top">
   <div class="hero-in">
@@ -691,6 +707,7 @@ E.auto.addEventListener('click', () => {
 ['wheel', 'touchstart', 'keydown'].forEach(ev => window.addEventListener(ev, () => { if (auto) stopAuto(); }, { passive: true }));
 
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readStops);
+addEventListener('themechange', readStops);
 readStops();
 window.__demo = { p: (p) => { window.scrollTo(0, window.scrollY + story.getBoundingClientRect().top + p * scrollRange()); } };
 requestAnimationFrame(frame);
