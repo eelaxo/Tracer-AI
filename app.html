@@ -56,6 +56,18 @@ a{color:inherit}
 .status{margin-left:auto;font:500 11.5px var(--mono);letter-spacing:.06em;color:var(--muted)}
 .status.ok::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--green);margin-right:8px}
 .status.bad{color:var(--red)}
+
+/* ---------- data source badge (live / simulated) ---------- */
+.ds-badge{display:inline-flex;align-items:center;gap:5px;font:500 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;padding:3px 10px;border-radius:3px;margin-left:10px}
+.ds-badge.live{background:rgba(27,122,87,.18);color:var(--green);border:1px solid var(--green)}
+.ds-badge.simulated{background:rgba(108,102,91,.12);color:var(--muted);border:1px solid var(--rule)}
+.ds-badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+/* ---------- api status pills ---------- */
+.api-pills{display:flex;gap:6px;flex-wrap:wrap;font:400 11px var(--mono);color:var(--muted);margin-top:4px}
+.api-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border:1px solid var(--rule);border-radius:3px}
+.api-pill.on{color:var(--green);border-color:var(--green)}
+.api-pill .dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+
 /* ---------- theme toggle button ---------- */
 .theme-btn{background:none;border:1px solid var(--rule);color:var(--muted);cursor:pointer;font-size:16px;padding:4px 9px;border-radius:4px;line-height:1;transition:border-color .2s,color .2s;margin-left:8px}
 .theme-btn:hover{border-color:var(--red);color:var(--red)}
@@ -271,6 +283,8 @@ footer{max-width:1240px;margin:0 auto;padding:22px 28px 34px;font:400 12.5px var
     <p class="lead">File a report by hand, or pull one from NCRP. The backend follows the money, scores every wallet and names the exchange it lands in.</p>
   </header>
 
+  <div class="api-pills" id="apiPills"></div>
+
   <section class="file" aria-label="Report a wallet">
     <div class="tabs">
       <button type="button" class="tab on" id="tabManual">Type it in</button>
@@ -394,6 +408,21 @@ function heat(p) {
 let C = null, L = null, R = null, timers = [], phase = 0, heatOn = true, selId = null;
 
 /* ---------------------------------------------------------------- status + recent cases */
+
+/* --- API status pills (Phase 2) --- */
+fetch('/api/status').then(r => r.json()).then(s => {
+  const box = document.getElementById('apiPills');
+  if (!box) return;
+  const pills = [
+    { label: 'Etherscan', on: s.etherscan },
+    { label: 'TronGrid',  on: s.trongrid  },
+    { label: 'Database',  on: s.database  },
+  ];
+  box.innerHTML = pills.map(p =>
+    `<span class="api-pill ${p.on ? 'on' : ''}"><span class="dot"></span>${p.label}: ${p.on ? 'connected' : 'not set'}</span>`
+  ).join('');
+}).catch(() => {});
+
 fetch('/api/cases').then((r) => { if (!r.ok) throw 0; return r.json(); }).then((rows) => {
   $('#status').textContent = 'backend connected'; $('#status').className = 'status ok'; drawRecent(rows);
 }).catch(() => { $('#status').textContent = 'backend not reachable'; $('#status').className = 'status bad'; });
@@ -447,7 +476,10 @@ function showCase(c) {
   C = c; selId = null;
   $('#result').hidden = false;
   var eb = document.getElementById('exportBar'); if (eb) eb.hidden = false;                       // must be visible before we measure paths
-  $('#caseTitle').innerHTML = '<span>Case file</span>' + esc(c.case_id);
+  const dsBadge = c.data_source === 'live'
+    ? '<span class="ds-badge live"><span class="dot"></span>Live chain data</span>'
+    : '<span class="ds-badge simulated"><span class="dot"></span>Simulated</span>';
+  $('#caseTitle').innerHTML = '<span>Case file</span>' + esc(c.case_id) + dsBadge;
   const s = c.summary;
   $('#stats').innerHTML = [
     ['Wallets found', s.wallets_found], ['Hops followed', s.hops], ['Chains', s.chains.join(' + ')],
